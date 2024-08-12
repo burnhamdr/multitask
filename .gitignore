@@ -7,3 +7,8 @@ datasets/
 previous_versions/*
 sbatch/*
 *test.py
+*.json
+*.ckpt.index
+*.ckpt.data-00000-of-00001
+*.ckpt.meta
+*checkpoint
