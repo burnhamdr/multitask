@@ -175,7 +175,7 @@ def pretty_inputoutput_plot(model_dir, rule, save=False, plot_ylabel=False):
             ax.get_yaxis().set_label_coords(-0.12,0.5)
 
         if save:
-            save_name = 'figure/sample_'+rule_name[rule].replace(' ','')+'.pdf'
+            save_name = model_dir + '/figure/sample_'+rule_name[rule].replace(' ','')+'.pdf'
             plt.savefig(save_name, transparent=True)
         plt.show()
 
@@ -252,9 +252,9 @@ def pretty_singleneuron_plot(model_dir,
                 e1 = e1 if e1 is not None else h_tests[rule].shape[0]
                 ax.plot([e0, e1], [h_max*1.15]*2,
                         color='black',linewidth=1.5)
-                figname = 'figure/trace_'+rule_name[rule]+epoch+save_name+'.pdf'
+                figname = model_dir + '/figure/trace_'+rule_name[rule]+epoch+save_name+'.pdf'
             else:
-                figname = 'figure/trace_unit'+str(neuron)+rule_name[rule]+save_name+'.pdf'
+                figname = model_dir + '/figure/trace_unit'+str(neuron)+rule_name[rule]+save_name+'.pdf'
 
             plt.ylim(np.array([-0.1, 1.2])*h_max)
             plt.xticks([0, 1.5])
@@ -382,7 +382,9 @@ def schematic_plot(model_dir, rule=None):
                        rotation='vertical')
             plt.title('Stimulus mod 2', fontsize=fontsize, y=0.9)
         ax.get_yaxis().set_label_coords(-0.12,0.5)
-    plt.savefig('figure/schematic_input.pdf',transparent=True)
+    
+    sfn = model_dir + '/figure/schematic_input.pdf'
+    plt.savefig(sfn,transparent=True)
     plt.show()
 
     # Plot Rule Inputs
@@ -410,7 +412,9 @@ def schematic_plot(model_dir, rule=None):
     plt.title('Rule inputs', fontsize=fontsize, y=0.9)
     ax.get_yaxis().set_label_coords(-0.12,0.5)
 
-    plt.savefig('figure/schematic_rule.pdf',transparent=True)
+    #create save fig fn
+    sfn = model_dir + '/figure/schematic_rule.pdf'
+    plt.savefig(sfn,transparent=True)
     plt.show()
 
 
@@ -434,7 +438,8 @@ def schematic_plot(model_dir, rule=None):
     plt.yticks([0,n_hidden-1],['1',str(n_hidden)],rotation='vertical')
     plt.title('Recurrent units', fontsize=fontsize, y=0.95)
     ax.get_yaxis().set_label_coords(-0.12,0.5)
-    plt.savefig('figure/schematic_units.pdf',transparent=True)
+    sfn = model_dir + '/figure/schematic_units.pdf'
+    plt.savefig(sfn,transparent=True)
     plt.show()
 
 
@@ -472,8 +477,8 @@ def schematic_plot(model_dir, rule=None):
             plt.title('Response', fontsize=fontsize, y=0.9)
 
         ax.get_yaxis().set_label_coords(-0.12,0.5)
-
-    plt.savefig('figure/schematic_outputs.pdf',transparent=True)
+    sfn = model_dir + '/figure/schematic_output.pdf'
+    plt.savefig(sfn,transparent=True)
     plt.show()
     
 
@@ -512,7 +517,8 @@ def networkx_illustration(model_dir):
             edge_color=color,
             edge_cmap=plt.cm.RdBu_r,
             ax=ax)
-    plt.savefig('figure/illustration_networkx.pdf', transparent=True)
+    sfn = model_dir + '/figure/networkx_illustration.pdf'
+    plt.savefig(sfn, transparent=True)
 
 
 if __name__ == "__main__":

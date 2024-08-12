@@ -239,12 +239,19 @@ def delaygo_(config, mode, anti_response, **kwargs):
         stim_locs = rng.rand(batch_size)*2*np.pi
         # stim_ons  = int(500/dt)
         stim_ons  = int(rng.choice([300, 500, 700])/dt)
-        # stim_offs = stim_ons + int(200/dt)
         stim_offs = stim_ons + int(rng.choice([200, 400, 600])/dt)
-        fix_offs = stim_offs + int(rng.choice([200, 400, 800, 1600])/dt)
-        # fix_offs = stim_offs + int(rng.choice([1600])/dt)
+        # fix_offs = stim_offs #+ int(rng.choice([200])/dt)
+        fix_offs = stim_ons + int(rng.choice([200, 400, 800, 1600])/dt)
         tdim     = fix_offs + int(500/dt)
         stim_mod  = rng.choice([1,2])
+
+        # # A list of locations of stimulus (they are always on)
+        # stim_locs = rng.rand(batch_size)*2*np.pi
+        # stim_mod  = rng.choice([1,2])
+        # stim_ons  = int(rng.uniform(300,700)/dt)
+        # fix_offs  = stim_ons + int(rng.uniform(500,1500)/dt)
+        # stim_offs = fix_offs
+        # tdim      = int(500/dt) + fix_offs
 
     elif mode == 'test':
         tdim = int(2500/dt)
@@ -439,10 +446,10 @@ def _contextdm(config, mode, attend_mod, **kwargs):
 
     trial = Trial(config, tdim, batch_size)
     trial.add('fix_in', offs=fix_offs)
-    trial.add('stim', stim1_locs, ons=stim_ons, offs=stim_offs, strengths=stim1_mod1_strengths, mods=1)
-    trial.add('stim', stim2_locs, ons=stim_ons, offs=stim_offs, strengths=stim2_mod1_strengths, mods=1)
-    trial.add('stim', stim1_locs, ons=stim_ons, offs=stim_offs, strengths=stim1_mod2_strengths, mods=2)
-    trial.add('stim', stim2_locs, ons=stim_ons, offs=stim_offs, strengths=stim2_mod2_strengths, mods=2)
+    trial.add('stim', stim1_locs, ons=stim_ons, offs=None, strengths=stim1_mod1_strengths, mods=1)
+    trial.add('stim', stim2_locs, ons=stim_ons, offs=None, strengths=stim2_mod1_strengths, mods=1)
+    trial.add('stim', stim1_locs, ons=stim_ons, offs=None, strengths=stim1_mod2_strengths, mods=2)
+    trial.add('stim', stim2_locs, ons=stim_ons, offs=None, strengths=stim2_mod2_strengths, mods=2)
     trial.add('fix_out', offs=fix_offs)
     stim_locs = [stim1_locs[i] if (stim1_strengths[i]>stim2_strengths[i])
                 else stim2_locs[i] for i in range(batch_size)]
@@ -1606,10 +1613,13 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
         else:
             rule_strength = [1.] * len(rule)
 
-    for r, s in zip(rule, rule_strength):
-        trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
+    #turn off adding rule here
+    if not ('no_rule' in kwargs and kwargs['no_rule']):
+        for r, s in zip(rule, rule_strength):
+            trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
 
     if noise_on:
         trial.add_x_noise()
 
     return trial
+

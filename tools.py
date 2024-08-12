@@ -7,6 +7,22 @@ import json
 import pickle
 import numpy as np
 
+def align_hp(hp, pretrained_hp):
+    """Align hyperparameters with pretrained model."""
+    align_params = ['n_eachring',
+                    'num_ring',
+                    'n_rule',
+                    'n_input',
+                    'n_output',
+                    'n_rnn']
+    #check that the RNN parameters are the same
+    for param in align_params:
+        if hp[param] != pretrained_hp[param]:
+            raise ValueError('RNN Hyperparameter mismatch: {} {} {}'.format(
+                param, hp[param], pretrained_hp[param]))
+    
+    return True
+
 
 def gen_feed_dict(model, trial, hp):
     """Generate feed_dict for session run."""

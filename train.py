@@ -57,8 +57,16 @@ def get_default_hp(ruleset):
             'sigma_rec': 0.05,
             # input noise
             'sigma_x': 0.01,
-            # leaky_rec weight initialization, diag, randortho, randgauss
+            # leaky_rec weight initialization, diag, randortho, randgauss, or ndarray
             'w_rec_init': 'randortho',
+            # leaky_rec input weight initialization, randgauss, ones, or ndarray
+            'w_in_init': 'randgauss',
+            # output weight initialization, glorot_uniform, or ndarray
+            'w_out_init': 'glorot_uniform',
+            # leaky_rec bias initialization, zeros, uniform, or ndarray
+            'b_rec_init': 'zeros',
+            # output bias initialization, zeros, uniform, or ndarray
+            'b_out_init': 'zeros',
             # a default weak regularization prevents instability
             'l1_h': 0,
             # l2 regularization on activity
@@ -96,6 +104,9 @@ def get_default_hp(ruleset):
             # intelligent synapses parameters, tuple (c, ksi)
             'c_intsyn': 0,
             'ksi_intsyn': 0,
+            # rule strength
+            'rule_strength': 1.,
+            'no_rule': False,
             }
 
     return hp
@@ -128,7 +139,7 @@ def do_eval(sess, model, log, rule_train):
         perf_tmp = list()
         for i_rep in range(n_rep):
             trial = generate_trials(
-                rule_test, hp, 'random', batch_size=batch_size_test_rep)
+                rule_test, hp, 'random', batch_size=batch_size_test_rep, rule_strength=hp['rule_strength'], no_rule=hp['no_rule'])
             feed_dict = tools.gen_feed_dict(model, trial, hp)
             c_lsq, c_reg, y_hat_test = sess.run(
                 [model.cost_lsq, model.cost_reg, model.y_hat],
@@ -193,6 +204,8 @@ def train(model_dir,
           rich_output=False,
           load_dir=None,
           trainables=None,
+          pretrained_dir=None,
+          apply_pretrained_params=None,
           ):
     """Train the network.
 
@@ -243,6 +256,68 @@ def train(model_dir,
     tools.save_hp(hp, model_dir)
 
     # Build the model
+    if pretrained_dir is not None:
+        pretrained_hp = tools.load_hp(pretrained_dir)
+        #check that the model hyper parameters are the same as the pretrained model
+        assert tools.align_hp(hp, pretrained_hp)
+        hp['pretrained_dir'] = pretrained_dir
+        pre_trained_model = Model(pretrained_dir)
+
+        with tf.Session() as sess:
+            pre_trained_model.restore()
+            # get all connection weights and biases as tensorflow variables
+            var_list = pre_trained_model.var_list
+            # evaluate the parameters after training
+            pre_trained_params = [sess.run(var) for var in var_list]
+            # get name of each variable
+            pre_trained_params_names  = [var.name for var in var_list]
+        
+        if apply_pretrained_params is not None:
+            if apply_pretrained_params == 'all':
+                #apply all parameters from pretrained model
+                apply_pretrained_params = pre_trained_params_names
+            #account if something like 'rnn/leaky_rnn_cell/rec_weights:0' or 
+            #'rnn/leaky_rnn_cell/in_weights:0' are specified in apply_pretrained_params
+            #by construction these are packaged into a single 'rnn/leaky_rnn_cell/kernel:0'
+            #parameter in all models
+            allowed_param_names = pre_trained_params_names + ['rnn/leaky_rnn_cell/in_weights:0', 'rnn/leaky_rnn_cell/rec_weights:0']
+            #check that all the strings in apply_pretrained_params are in the pretrained model
+            assert all([param_ in allowed_param_names for param_ in apply_pretrained_params])
+            #if the user specifies 'rnn/leaky_rnn_cell/in_weights:0' or 'rnn/leaky_rnn_cell/rec_weights:0'
+            #then replace them with 'rnn/leaky_rnn_cell/kernel:0'
+            apply_pretrained_params_wkernel = ['rnn/leaky_rnn_cell/kernel:0' if param_ in ['rnn/leaky_rnn_cell/in_weights:0', 'rnn/leaky_rnn_cell/rec_weights:0'] else param_ for param_ in apply_pretrained_params]
+            #pop all entries from pre_trained_params and pre_trained_params_names 
+            #that are not in apply_pretrained_params
+            pre_trained_params = [pre_trained_params[i] for i in range(len(pre_trained_params)) if pre_trained_params_names[i] in apply_pretrained_params_wkernel]
+            pre_trained_params_names = [name for name in pre_trained_params_names if name in apply_pretrained_params_wkernel]
+
+            if 'rnn/leaky_rnn_cell/kernel:0' in pre_trained_params_names:
+                #we need to split the kernel into in_weights and rec_weights
+                kernel_ind = pre_trained_params_names.index('rnn/leaky_rnn_cell/kernel:0')
+                kernel = pre_trained_params[kernel_ind]
+                in_weights = kernel[:hp['n_input'], :]
+                rec_weights = kernel[hp['n_input']:, :]
+                if 'rnn/leaky_rnn_cell/in_weights:0' in apply_pretrained_params:                    
+                    hp['w_in_init'] = in_weights
+                elif 'rnn/leaky_rnn_cell/rec_weights:0' in apply_pretrained_params:                    
+                    hp['w_rec_init'] = rec_weights
+                elif 'rnn/leaky_rnn_cell/kernel:0' in apply_pretrained_params:
+                    #specify both in_weights and rec_weights if user specifies kernel
+                    hp['w_in_init'] = in_weights
+                    hp['w_rec_init'] = rec_weights
+                else:
+                    raise ValueError('Unknown rnn kernel parameter in apply_pretrained_params')
+            if 'rnn/leaky_rnn_cell/bias:0' in apply_pretrained_params:
+                bias_ind = pre_trained_params_names.index('rnn/leaky_rnn_cell/bias:0')
+                hp['b_rec_init'] = pre_trained_params[bias_ind]
+            if 'output/weights:0' in apply_pretrained_params:
+                weights_ind = pre_trained_params_names.index('output/weights:0')
+                hp['w_out_init'] = pre_trained_params[weights_ind]
+            if 'output/biases:0' in apply_pretrained_params:
+                bias_ind = pre_trained_params_names.index('output/biases:0')
+                hp['b_out_init'] = pre_trained_params[bias_ind]
+
+
     model = Model(model_dir, hp=hp)
 
     # Display hp
@@ -273,6 +348,18 @@ def train(model_dir,
         elif trainables == 'rule':
             # train rule inputs only
             var_list = [v for v in model.var_list if 'rule_input' in v.name]
+        elif trainables == 'rnn_bias':
+            # train biases only
+            var_list = [v for v in model.var_list if ('rnn' in v.name) and ('bias' in v.name)]#('rnn' in v.name) and ('bias' in v.name)
+        elif trainables == 'all_bias':
+            # train rnn weights only
+            var_list = [v for v in model.var_list if ('bias' in v.name)]
+        elif trainables == 'rnn_bias_and_output_weights':
+            # train biases and output weights only
+            var_list = [v for v in model.var_list if ('rnn' in v.name and 'bias' in v.name) or ('output' in v.name and 'weights' in v.name)]
+        elif trainables == 'rnn_bias_and_output_layer':
+            # train rnn weights and output layer only
+            var_list = [v for v in model.var_list if ('bias' in v.name) or ('output' in v.name)]
         else:
             raise ValueError('Unknown trainables')
         model.set_optimizer(var_list=var_list)
@@ -303,6 +390,38 @@ def train(model_dir,
                 model.cost_reg += tf.nn.l2_loss((w - w_val) * w_mask)
             model.set_optimizer(var_list=var_list)
 
+        # if trainables == 'bias' and len(hp['rule_trains']) > 1:
+        #     # if training bias, and more than one rule
+        #     # then divide up the recurrent bias into separate partitions
+        #     # for each rule.
+        #     rec_biases = var_list[0]#should be the only entry in the var list if training biases only
+        #     #now create masks on rec_biases for each rule
+        #     n_rule = len(hp['rule_trains'])
+        #     n_rnn = hp['n_rnn']
+        #     # Base length of each subsection
+        #     bias_subset_size = n_rnn // n_rule
+        #     available_inds = np.arange(n_rnn)
+        #     bias_masks = {}
+        #     init_b_vals = sess.run(rec_biases)
+        #     for i in range(n_rule):
+        #         # Create a mask for each rule
+        #         mask = np.ones(n_rnn, dtype=np.float32)*1e-1
+        #         # get the bias indices for this rule
+        #         rule_bias_indices = np.random.choice(available_inds, bias_subset_size, replace=False)
+        #         # drop the indices from the available indices
+        #         available_inds = np.setdiff1d(available_inds, rule_bias_indices)
+        #         # Set the mask to 1 for the bias indices
+        #         mask[rule_bias_indices] = 0.0
+        #         # Add the mask to the dictionary
+        #         bias_masks[hp['rule_trains'][i]] = tf.reshape(tf.constant(mask), rec_biases.shape)
+
+        #     initial_regularization = model.cost_reg
+
+        print('Variables being optimized:')
+        for v in var_list:
+            print(v)
+
+        
         step = 0
         while step * hp['batch_size_train'] <= max_steps:
             try:
@@ -327,9 +446,23 @@ def train(model_dir,
                 # Generate a random batch of trials.
                 # Each batch has the same trial length
                 trial = generate_trials(
-                        rule_train_now, hp, 'random',
-                        batch_size=hp['batch_size_train'])
+                        rule_train_now, hp, 'random',#random
+                        batch_size=hp['batch_size_train'],
+                        rule_strength=hp['rule_strength'],
+                        no_rule=hp['no_rule'])
+                
+                # if trainables == 'bias' and len(hp['rule_trains']) > 1:
+                #     # if training bias, and more than one rule
+                #     rule_bias_mask = bias_masks[rule_train_now]
+                #     bias_tensor = sess.run(rec_biases)#get the current bias tensor
+                #     partial_bias_reg = tf.nn.l2_loss((bias_tensor - init_b_vals) * rule_bias_mask)
+                    
+                #     # Combine with other regularization terms
+                #     total_reg = initial_regularization + partial_bias_reg
 
+                #     # Update the cost function with the combined regularization term
+                #     model.cost_reg = total_reg
+                    
                 # Generating feed_dict.
                 feed_dict = tools.gen_feed_dict(model, trial, hp)
                 sess.run(model.train_step, feed_dict=feed_dict)
@@ -351,6 +484,7 @@ def train_sequential(
         display_step=500,
         ruleset='mante',
         seed=0,
+        trainables=None,
         ):
     '''Train the network sequentially.
 
@@ -420,6 +554,23 @@ def train_sequential(
     # Use customized session that launches the graph as well
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
+
+        # Set trainable parameters
+        if trainables is None or trainables == 'all':
+            var_list = model.var_list  # train everything
+        elif trainables == 'input':
+            # train all nputs
+            var_list = [v for v in model.var_list
+                        if ('input' in v.name) and ('rnn' not in v.name)]
+        elif trainables == 'rule':
+            # train rule inputs only
+            var_list = [v for v in model.var_list if 'rule_input' in v.name]
+        elif trainables == 'bias':
+            # train biases only
+            var_list = [v for v in model.var_list if ('rnn' in v.name) and ('bias' in v.name)]#('rnn' in v.name) and ('bias' in v.name)
+        else:
+            raise ValueError('Unknown trainables')
+        model.set_optimizer(var_list=var_list)
 
         # penalty on deviation from initial weight
         if hp['l2_weight_init'] > 0:

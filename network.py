@@ -114,6 +114,8 @@ class LeakyRNNCell(RNNCell):
                  sigma_rec=0,
                  activation='softplus',
                  w_rec_init='diag',
+                 w_in_init='randgauss',
+                 b_rec_init='zeros',
                  rng=None,
                  reuse=None,
                  name=None):
@@ -123,13 +125,16 @@ class LeakyRNNCell(RNNCell):
         # self.input_spec = base_layer.InputSpec(ndim=2)
 
         self._num_units = num_units
+        self._num_inputs = n_input
         self._w_rec_init = w_rec_init
+        self._w_in_init = w_in_init
+        self._b_rec_init = b_rec_init
         self._reuse = reuse
 
         if activation == 'softplus':
             self._activation = tf.nn.softplus
             self._w_in_start = 1.0
-            self._w_rec_start = 0.5
+            self._w_rec_start = 0.5#0.5
         elif activation == 'tanh':
             self._activation = tf.tanh
             self._w_in_start = 1.0
@@ -137,7 +142,7 @@ class LeakyRNNCell(RNNCell):
         elif activation == 'relu':
             self._activation = tf.nn.relu
             self._w_in_start = 1.0
-            self._w_rec_start = 0.5
+            self._w_rec_start = 0.5#0.5
         elif activation == 'power':
             self._activation = lambda x: tf.square(tf.nn.relu(x))
             self._w_in_start = 1.0
@@ -146,6 +151,10 @@ class LeakyRNNCell(RNNCell):
             self._activation = lambda x: tf.tanh(tf.nn.relu(x))
             self._w_in_start = 1.0
             self._w_rec_start = 0.5
+        elif activation == 'sigmoid':
+            self._activation = tf.nn.sigmoid
+            self._w_in_start = 1.0
+            self._w_rec_start = 1.0
         else:
             raise ValueError('Unknown activation')
         self._alpha = alpha
@@ -157,22 +166,45 @@ class LeakyRNNCell(RNNCell):
 
         # Generate initialization matrix
         n_hidden = self._num_units
-        w_in0 = (self.rng.randn(n_input, n_hidden) /
-                 np.sqrt(n_input) * self._w_in_start)
+        n_input = self._num_inputs
 
-        if self._w_rec_init == 'diag':
-            w_rec0 = self._w_rec_start*np.eye(n_hidden)
-        elif self._w_rec_init == 'randortho':
-            w_rec0 = self._w_rec_start*tools.gen_ortho_matrix(n_hidden,
-                                                              rng=self.rng)
-        elif self._w_rec_init == 'randgauss':
-            w_rec0 = (self._w_rec_start *
-                      self.rng.randn(n_hidden, n_hidden)/np.sqrt(n_hidden))
+        if isinstance(self._w_in_init, np.ndarray):
+            assert self._w_in_init.shape == (n_input, n_hidden)
+            w_in0 = self._w_in_init
+        else:
+            if self._w_in_init == 'randgauss':
+                w_in0 = (self.rng.randn(n_input, n_hidden) /
+                        np.sqrt(n_input) * self._w_in_start)
+            elif self._w_in_init == 'ones':
+                w_in0 = (np.ones((n_input, n_hidden)) * self._w_in_start)
+
+        if isinstance(self._w_rec_init, np.ndarray):
+            assert self._w_rec_init.shape == (n_hidden, n_hidden)
+            w_rec0 = self._w_rec_init
+        else:
+            if self._w_rec_init == 'diag':
+                w_rec0 = self._w_rec_start*np.eye(n_hidden)
+            elif self._w_rec_init == 'randortho':
+                w_rec0 = self._w_rec_start*tools.gen_ortho_matrix(n_hidden,
+                                                                rng=self.rng)
+            elif self._w_rec_init == 'randgauss':
+                w_rec0 = (self._w_rec_start *
+                        self.rng.randn(n_hidden, n_hidden)/np.sqrt(n_hidden))
 
         matrix0 = np.concatenate((w_in0, w_rec0), axis=0)
 
         self.w_rnn0 = matrix0
         self._initializer = tf.constant_initializer(matrix0, dtype=tf.float32)
+
+        if isinstance(self._b_rec_init, np.ndarray):
+            assert self._b_rec_init.shape == (n_hidden,)
+            self._bias_initializer = tf.constant_initializer(self._b_rec_init, dtype=tf.float32)
+        else:
+            if self._b_rec_init == 'zeros':
+                self._bias_initializer = init_ops.zeros_initializer(dtype=tf.float32)
+            elif self._b_rec_init == 'uniform':
+                self._bias_initializer = init_ops.random_uniform_initializer(
+                    minval=-0.1, maxval=0.1, dtype=tf.float32)
 
     @property
     def state_size(self):
@@ -196,7 +228,7 @@ class LeakyRNNCell(RNNCell):
         self._bias = self.add_variable(
                 'bias',
                 shape=[self._num_units],
-                initializer=init_ops.zeros_initializer(dtype=self.dtype))
+                initializer=self._bias_initializer)
 
         self.built = True
 
@@ -464,7 +496,8 @@ class Model(object):
             print('Overwrite original dt with {:0.1f}'.format(dt))
             hp['dt'] = dt
 
-        hp['alpha'] = 1.0*hp['dt']/hp['tau']
+        if 'alpha' not in hp:
+            hp['alpha'] = 1.0*hp['dt']/hp['tau']
 
         # Input, target output, and cost mask
         # Shape: [Time, Batch, Num_units]
@@ -511,6 +544,7 @@ class Model(object):
         elif hp['optimizer'] == 'sgd':
             self.opt = tf.train.GradientDescentOptimizer(
                 learning_rate=hp['learning_rate'])
+        
         # Set cost
         self.set_optimizer()
 
@@ -549,6 +583,8 @@ class Model(object):
                                 sigma_rec=hp['sigma_rec'],
                                 activation=hp['activation'],
                                 w_rec_init=hp['w_rec_init'],
+                                w_in_init=hp['w_in_init'],
+                                b_rec_init=hp['b_rec_init'],
                                 rng=self.rng)
         elif hp['rnn_type'] == 'LeakyGRU':
             cell = LeakyGRUCell(
@@ -569,18 +605,41 @@ class Model(object):
             cell, self.x, dtype=tf.float32, time_major=True)
 
         # Output
+        if isinstance(hp['w_out_init'], np.ndarray):
+            assert hp['w_out_init'].shape == (n_rnn, n_output)
+            self._w_out_initializer = tf.constant_initializer(hp['w_out_init'], dtype=tf.float32)
+        else:
+            if hp['w_out_init'] == 'glorot_uniform':
+                self._w_out_initializer = init_ops.glorot_uniform_initializer(dtype=tf.float32)
+
+        if isinstance(hp['b_out_init'], np.ndarray):
+            assert hp['b_out_init'].shape == (n_output,)
+            self._b_out_initializer = tf.constant_initializer(hp['b_out_init'], dtype=tf.float32)
+        else:
+            if hp['b_out_init'] == 'zeros':
+                self._b_out_initializer = init_ops.zeros_initializer(dtype=tf.float32)
+            elif hp['b_out_init'] == 'uniform':
+                self._b_out_initializer = init_ops.random_uniform_initializer(
+                    minval=-0.1, maxval=0.1, dtype=tf.float32)
+
         with tf.variable_scope("output"):
             # Using default initialization `glorot_uniform_initializer`
+            # w_out = tf.get_variable(
+            #     'weights',
+            #     [n_rnn, n_output],
+            #     dtype=tf.float32,
+            # )
             w_out = tf.get_variable(
                 'weights',
                 [n_rnn, n_output],
-                dtype=tf.float32
+                dtype=tf.float32,
+                initializer=self._w_out_initializer
             )
             b_out = tf.get_variable(
                 'biases',
                 [n_output],
                 dtype=tf.float32,
-                initializer=tf.constant_initializer(0.0, dtype=tf.float32)
+                initializer=self._b_out_initializer
             )
 
         h_shaped = tf.reshape(self.h, (-1, n_rnn))
@@ -781,10 +840,6 @@ class Model(object):
 
         if var_list is None:
             var_list = self.var_list
-
-        print('Variables being optimized:')
-        for v in var_list:
-            print(v)
 
         self.grads_and_vars = self.opt.compute_gradients(cost, var_list)
         # gradient clipping

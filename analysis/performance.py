@@ -65,8 +65,12 @@ def plot_performanceprogress(model_dir, rule_plot=None):
 
     trials = log['trials']
 
-    fs = 6 # fontsize
-    fig = plt.figure(figsize=(3.5,1.2))
+    fs = 14 # fontsize
+    w = 7.5
+    h = 4.2
+    transparent = False
+
+    fig = plt.figure(figsize=(w,h))
     ax = fig.add_axes([0.1,0.25,0.35,0.6])
     lines = list()
     labels = list()
@@ -98,7 +102,8 @@ def plot_performanceprogress(model_dir, rule_plot=None):
     lg = fig.legend(lines, labels, title='Task',ncol=2,bbox_to_anchor=(0.47,0.5),
                     fontsize=fs,labelspacing=0.3,loc=6,frameon=False)
     plt.setp(lg.get_title(),fontsize=fs)
-    plt.savefig('figure/Performance_Progresss.pdf', transparent=True)
+    sfn = model_dir + '/figure/Performance_Progress'
+    plt.savefig(sfn, transparent=transparent)
     plt.show()
 
 
@@ -187,7 +192,8 @@ def _plot_performanceprogress_cont(model_dir, model_dir2=None, save=True):
         name = 'TrainingCont_Progress'
         if model_dir2 is not None:
             name = name + '2'
-        plt.savefig('figure/'+name+'.pdf', transparent=True)
+        sfn = model_dir + '/figure/' + name + '.pdf'
+        plt.savefig(sfn, transparent=True)
     plt.show()
 
 
@@ -252,7 +258,8 @@ def plot_finalperformance_cont(model_dirs1, model_dirs2):
     ax.yaxis.set_ticks_position('left')
     # plt.setp(lg.get_title(),fontsize=7)
     if save:
-        plt.savefig('figure/FinalCostPerformanceCont.pdf', transparent=True)
+        sfn = model_dirs1 + '/figure/FinalPerformanceCont.pdf'
+        plt.savefig(sfn, transparent=True)
     plt.show()
 
 
@@ -835,7 +842,7 @@ def plot_choicefamily_varytime(model_dir, rule):
     figname = 'varytime2_'+rule_name[rule].replace(' ','')
     # figname = figname + model_dir
     if save:
-        plt.savefig('figure/'+figname+'.pdf', transparent=True)
+        plt.savefig(model_dir + '/figure/'+figname+'.pdf', transparent=True)
 
 
     # Chronometric curve
