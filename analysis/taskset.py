@@ -230,7 +230,7 @@ class TaskSetAnalysis(object):
         if epochs is not None:
             save_name = save_name + ''.join(epochs)
 
-        plt.savefig(os.path.join('figure', save_name+'.pdf'), transparent=True)
+        plt.savefig(os.path.join('./../figure', save_name+'.pdf'), transparent=True)
         plt.show()
 
 
@@ -395,7 +395,7 @@ def _plot_taskspace(h_trans, fig_name='temp', plot_example=False, lxy=None,
     ax.set_xlabel(pc_name+' {:d}'.format(dim0+1), fontsize=fs, labelpad=-5)
     ax.set_ylabel(pc_name+' {:d}'.format(dim1+1), fontsize=fs, labelpad=-5)
 
-    plt.savefig(os.path.join('figure', fig_name+'.pdf'), transparent=True)
+    plt.savefig(os.path.join('./../figure', fig_name+'.pdf'), transparent=True)
     plt.show()
 
     return (lx, ly)
@@ -628,7 +628,7 @@ def _plot_replacerule_performance(perfs_all, rule, names, setup, fig_name=None):
     ax.set_ylim([0.5, n_condition+0.5])
     if fig_name is None:
         fig_name = 'taskset{:d}_perf'.format(setup)
-    plt.savefig(os.path.join('figure', fig_name+'.pdf'), transparent=True)
+    plt.savefig(os.path.join('./../figure', fig_name+'.pdf'), transparent=True)
     plt.show()
 
 

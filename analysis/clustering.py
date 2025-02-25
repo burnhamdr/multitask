@@ -398,7 +398,7 @@ class Analysis(object):
             if save_name is None:
                 save_name = self.hp['activation']
             fig_name = fig_name + save_name
-            plt.savefig('figure/'+fig_name+'.pdf', transparent=True)
+            plt.savefig('./../figure/'+fig_name+'.pdf', transparent=True)
         plt.show()
 
     def plot_variance(self, save_name=None):
@@ -477,12 +477,14 @@ class Analysis(object):
                         '_norm' + self.normalization_method)
             if save_name is not None:
                 fig_name = fig_name + save_name
+
             #join with the model directory
             fig_path = os.path.join(self.model_dir, 'figure/'+fig_name+'.pdf')
             #check if the figure directory exists, if not, create it
             if not os.path.exists(os.path.join(self.model_dir, 'figure')):
                 os.makedirs(os.path.join(self.model_dir, 'figure'))
             plt.savefig(fig_path, transparent=True)
+
         plt.show()
 
     def plot_similarity_matrix(self):
@@ -550,12 +552,14 @@ class Analysis(object):
             ax.scatter(Y[ind_l, 0], Y[ind_l, 1], color=colors[il+1], s=10)
         ax.axis('off')
         plt.title(method, fontsize=7)
+
         #check if the figure directory exists in the model directory
         if not os.path.exists(os.path.join(self.model_dir, 'figure')):
             os.makedirs(os.path.join(self.model_dir, 'figure'))
         #combine figname with the model directory
         figname = 'figure/taskvar_visual_by'+method+self.data_type+'.pdf'
         figname = os.path.join(self.model_dir, figname)
+
         if save:
             plt.savefig(figname, transparent=True)
         plt.show()
@@ -586,7 +590,7 @@ class Analysis(object):
             ax.xaxis.set_ticks_position('bottom')
             ax.yaxis.set_ticks_position('left')
             if save:
-                plt.savefig('figure/exampleunit_variance.pdf', transparent=True)
+                plt.savefig('./../figure/exampleunit_variance.pdf', transparent=True)
             plt.show()
 
             from analysis.standard_analysis import pretty_singleneuron_plot
@@ -681,7 +685,7 @@ class Analysis(object):
         ax1.axis('off')
         ax2.axis('off')
         if save:
-            plt.savefig('figure/connectivity_by'+self.data_type+'.pdf', transparent=True)
+            plt.savefig('./../figure/connectivity_by'+self.data_type+'.pdf', transparent=True)
         plt.show()
 
     def lesions(self):
@@ -799,7 +803,7 @@ class Analysis(object):
             ax.axis('off')
 
             if save:
-                plt.savefig('figure/lesion_cluster_by'+self.data_type+'_{:d}.pdf'.format(i), transparent=True)
+                plt.savefig('./../figure/lesion_cluster_by'+self.data_type+'_{:d}.pdf'.format(i), transparent=True)
 
 if __name__ == '__main__':
     root_dir = './data/train_all'

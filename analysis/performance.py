@@ -561,7 +561,7 @@ def plot_psychometric_choice(xdatas, ydatas, labels, colors, **kwargs):
     ax.spines["top"].set_visible(False)
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
-    figname = 'figure/analyze_'+rule_name[kwargs['rule']].replace(' ','') + '_performance'
+    figname = './../figure/analyze_'+rule_name[kwargs['rule']].replace(' ','') + '_performance'
     if 'figname_append' in kwargs:
         figname += kwargs['figname_append']
 
@@ -705,7 +705,7 @@ def _plot_psychometric_choicefamily_2D(prop1s, cohs, rule, title=None, **kwargs)
             save_name = rule_name[rule].replace(' ','')+'_perf2D.pdf'
         else:
             save_name = kwargs['save_name']
-        plt.savefig(os.path.join('figure', save_name), transparent=True)
+        plt.savefig(os.path.join('./../figure', save_name), transparent=True)
 
     plt.show()
 
@@ -943,7 +943,7 @@ def plot_psychometric_varytime(xdatas, ydatas, figname, labels, colors, **kwargs
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
     if save:
-        plt.savefig('figure/'+figname+'.pdf', transparent=True)
+        plt.savefig('./../figure/'+figname+'.pdf', transparent=True)
     plt.show()
 
 

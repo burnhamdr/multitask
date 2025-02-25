@@ -231,7 +231,7 @@ def _plot_hist_varprop(hist_plot, bins_edge, rule_pair, hist_example=None,
     if save:
         if figname is None:
             figname = 'plot_hist_varprop_tmp.pdf'
-        plt.savefig(os.path.join('figure', figname), transparent=True)
+        plt.savefig(os.path.join('./../figure', figname), transparent=True)
 
 
 def plot_hist_varprop(model_dir,
@@ -360,7 +360,7 @@ def plot_hist_varprop_all(model_dir, plot_control=True):
             
 
     # plt.tight_layout()
-    plt.savefig('figure/plot_hist_varprop_all.pdf', transparent=True)
+    plt.savefig('./../figure/plot_hist_varprop_all.pdf', transparent=True)
 
 def plot_hist_varprop_selection_cont():
         save_type = 'cont_allrule'

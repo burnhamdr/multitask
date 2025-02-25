@@ -578,6 +578,18 @@ class Model(object):
         # Recurrent activity
         if hp['rnn_type'] == 'LeakyRNN':
             n_in_rnn = self.x.get_shape().as_list()[-1]
+
+            # Check if all the necessary parameters are present, set default if not
+
+            if 'w_in_init' not in hp:
+                hp['w_in_init']='randgauss'
+            if 'b_rec_init' not in hp:
+                hp['b_rec_init']='zeros'
+            if 'w_out_init' not in hp:
+                hp['w_out_init']='glorot_uniform'
+            if 'b_out_init' not in hp:
+                hp['b_out_init']='zeros'
+
             cell = LeakyRNNCell(n_rnn, n_in_rnn,
                                 hp['alpha'],
                                 sigma_rec=hp['sigma_rec'],

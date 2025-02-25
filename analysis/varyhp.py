@@ -17,7 +17,7 @@ from analysis import standard_analysis
 mpl.rcParams.update({'font.size': 7})
 
 
-FIGPATH = os.path.join(os.getcwd(), 'figure')
+FIGPATH = os.path.join(os.getcwd(), './../figure')
 
 HP_NAME = {'activation': 'Activation Fun.',
            'rnn_type': 'Network type',

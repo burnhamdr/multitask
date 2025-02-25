@@ -98,7 +98,7 @@ class UnitAnalysis(object):
                        fontsize=fs, ncol=1, bbox_to_anchor=(1.5,1.0),
                        loc=1, frameon=False)
         plt.setp(lg.get_title(),fontsize=fs)
-        plt.savefig('figure/prettyplot_hist_varprop'+
+        plt.savefig('./../figure/prettyplot_hist_varprop'+
                 rule_name[rules[0]].replace(' ','')+
                 rule_name[rules[1]].replace(' ','')+
                 '.pdf', transparent=True)
@@ -170,7 +170,7 @@ class UnitAnalysis(object):
         ax.spines["top"].set_visible(False)
         ax.xaxis.set_ticks_position('bottom')
         ax.yaxis.set_ticks_position('left')
-        plt.savefig('figure/conn_'+conn_type+'_contextdm.pdf', transparent=True)
+        plt.savefig('./../figure/conn_'+conn_type+'_contextdm.pdf', transparent=True)
 
     def plot_rule_connections(self):
         """Plot connectivity while sorting by group.
@@ -247,7 +247,7 @@ class UnitAnalysis(object):
         ax.yaxis.set_ticks_position('left')
         ax.set_xlim([-0.8, len(rules)-0.2])
         ax.plot([-0.5, len(rules)-0.5], [0, 0], color='gray', linewidth=0.5)
-        plt.savefig('figure/conn_rule_contextdm.pdf', transparent=True)
+        plt.savefig('./../figure/conn_rule_contextdm.pdf', transparent=True)
         plt.show()
 
     def plot_rec_connections(self):
@@ -341,7 +341,7 @@ class UnitAnalysis(object):
         plt.tick_params(axis='both', which='major', labelsize=fs)
         plt.locator_params(nbins=3)
 
-        plt.savefig('figure/conn_rec_contextdm.pdf', transparent=True)
+        plt.savefig('./../figure/conn_rec_contextdm.pdf', transparent=True)
 
 
 def _gen_taskparams(stim1_loc, n_rep=1):
@@ -460,7 +460,7 @@ def _plot_performance_choicetasks(model_dir, lesion_units_list, rules_perf=None,
     ax.set_xlim([-0.8, len(rules_perf)-0.2])
     ax.set_ylim([0, 1])
     ax.set_yticks([0, 1])
-    fig_name = 'figure/perf_contextdm_lesion'
+    fig_name = './../figure/perf_contextdm_lesion'
     if save_name is not None:
         fig_name += save_name
     plt.savefig(fig_name + '.pdf', transparent=True)
