@@ -9,6 +9,7 @@ import os
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 import tensorflow as tf
 
@@ -41,19 +42,213 @@ kelly_colors = \
  np.array([ 0.88627451,  0.34509804,  0.13333333]),
  np.array([ 0.16862745,  0.23921569,  0.14901961])]
 
+from matplotlib import colors as mcolors
+from skimage.color import rgb2lab
+from sklearn.metrics import pairwise_distances
 
+def get_maximally_contrastive_colors(N, light_threshold=95, dark_threshold=5):
+    # Retrieve CSS4 colors and filter out those that are too light or too dark
+    css4_colors = list(mcolors.CSS4_COLORS.items())
+    css4_rgb_values = np.array([mcolors.to_rgb(color[1]) for color in css4_colors])
+    css4_lab_values = rgb2lab(css4_rgb_values.reshape(1, -1, 3)).reshape(-1, 3)
+    
+    # Filter colors: exclude colors that are too close to white or black in Lab space
+    filtered_indices = [
+        i for i, lab in enumerate(css4_lab_values)
+        if dark_threshold < lab[0] < light_threshold
+    ]
+    # Check if there are enough colors left after filtering
+    if N > len(filtered_indices) or N <= 0:
+        raise ValueError(f"N should be between 1 and {len(filtered_indices)} after filtering")
+
+    # Filtered colors and lab values
+    filtered_colors = [css4_colors[i] for i in filtered_indices]
+    filtered_lab_values = css4_lab_values[filtered_indices]
+
+    # Step 1: Choose the first color arbitrarily and select maximally distinct colors
+    selected_indices = [0]
+    remaining_indices = set(range(1, len(filtered_lab_values)))
+    
+    # Select N colors that are maximally distinct from each other
+    for _ in range(N - 1):
+        last_color = filtered_lab_values[selected_indices[-1]].reshape(1, -1)
+        distances = pairwise_distances(last_color, filtered_lab_values[list(remaining_indices)])
+        next_index = list(remaining_indices)[np.argmax(distances)]
+        selected_indices.append(next_index)
+        remaining_indices.remove(next_index)
+    
+    # Step 2: Reorder the selected colors for maximum contrast
+    ordered_indices = [selected_indices[0]]
+    remaining_indices = set(selected_indices[1:])
+    
+    while remaining_indices:
+        last_color = filtered_lab_values[ordered_indices[-1]].reshape(1, -1)
+        distances = pairwise_distances(last_color, filtered_lab_values[list(remaining_indices)])
+        next_index = list(remaining_indices)[np.argmax(distances)]
+        ordered_indices.append(next_index)
+        remaining_indices.remove(next_index)
+    
+    # Retrieve the ordered color names and hex codes
+    ordered_colors = [filtered_colors[i] for i in ordered_indices]
+    ordered_rgb_values = [np.array(mcolors.to_rgb(hex_code)) for _, hex_code in ordered_colors]
+
+    return ordered_rgb_values
+
+kelly_expanded = [
+np.array([0.9411764705882353, 0.9725490196078431, 1.0]), # aliceblue (#F0F8FF)
+np.array([0.0, 1.0, 0.0]), # lime (#00FF00)
+np.array([0.0, 0.0, 0.803921568627451]), # mediumblue (#0000CD)
+np.array([0.4980392156862745, 1.0, 0.0]), # chartreuse (#7FFF00)
+np.array([1.0, 0.0, 1.0]), # fuchsia (#FF00FF)
+np.array([0.6784313725490196, 1.0, 0.1843137254901961]), # greenyellow (#ADFF2F)
+np.array([0.5803921568627451, 0.0, 0.8274509803921568]), # darkviolet (#9400D3)
+np.array([0.5411764705882353, 0.16862745098039217, 0.8862745098039215]), # blueviolet (#8A2BE2)
+np.array([0.0, 0.0, 0.5450980392156862]), # darkblue (#00008B)
+np.array([0.19607843137254902, 0.803921568627451, 0.19607843137254902]), # limegreen (#32CD32)
+np.array([0.6, 0.19607843137254902, 0.8]), # darkorchid (#9932CC)
+np.array([0.0, 0.9803921568627451, 0.6039215686274509]), # mediumspringgreen (#00FA9A)
+np.array([0.0, 0.0, 0.5019607843137255]), # navy (#000080)
+np.array([1.0, 0.8431372549019608, 0.0]), # gold (#FFD700)
+np.array([0.29411764705882354, 0.0, 0.5098039215686274]), # indigo (#4B0082)
+np.array([0.6039215686274509, 0.803921568627451, 0.19607843137254902]), # yellowgreen (#9ACD32)
+np.array([0.4823529411764706, 0.40784313725490196, 0.9333333333333333]), # mediumslateblue (#7B68EE)
+np.array([0.0, 0.5019607843137255, 0.0]), # green (#008000)
+np.array([0.13333333333333333, 0.5450980392156862, 0.13333333333333333]), # forestgreen (#228B22)
+np.array([1.0, 0.0784313725490196, 0.5764705882352941]), # deeppink (#FF1493)
+np.array([0.596078431372549, 0.984313725490196, 0.596078431372549]), # palegreen (#98FB98)
+np.array([0.5019607843137255, 0.0, 0.5019607843137255]), # purple (#800080)
+np.array([1.0, 0.0, 0.0]), # red (#FF0000)
+np.array([0.0, 1.0, 1.0]), # aqua (#00FFFF)
+np.array([1.0, 0.27058823529411763, 0.0]), # orangered (#FF4500)
+np.array([0.8627450980392157, 0.0784313725490196, 0.23529411764705882]), # crimson (#DC143C)
+np.array([0.25098039215686274, 0.8784313725490196, 0.8156862745098039]), # turquoise (#40E0D0)
+np.array([0.7803921568627451, 0.08235294117647059, 0.5215686274509804]), # mediumvioletred (#C71585)
+np.array([0.0, 0.39215686274509803, 0.0]), # darkgreen (#006400)
+np.array([0.9333333333333333, 0.5098039215686274, 0.9333333333333333]), # violet (#EE82EE)
+np.array([0.4196078431372549, 0.5568627450980392, 0.13725490196078433]), # olivedrab (#6B8E23)
+np.array([0.2549019607843137, 0.4117647058823529, 0.8823529411764706]), # royalblue (#4169E1)
+np.array([1.0, 0.6470588235294118, 0.0]), # orange (#FFA500)
+np.array([0.11764705882352941, 0.5647058823529412, 1.0]), # dodgerblue (#1E90FF)
+np.array([1.0, 0.5490196078431373, 0.0]), # darkorange (#FF8C00)
+np.array([0.8549019607843137, 0.6470588235294118, 0.12549019607843137]), # goldenrod (#DAA520)
+np.array([0.41568627450980394, 0.35294117647058826, 0.803921568627451]), # slateblue (#6A5ACD)
+np.array([0.5019607843137255, 0.5019607843137255, 0.0]), # olive (#808000)
+np.array([0.4, 0.2, 0.6]), # rebeccapurple (#663399)
+np.array([0.9411764705882353, 0.9019607843137255, 0.5490196078431373]), # khaki (#F0E68C)
+np.array([0.5764705882352941, 0.4392156862745098, 0.8588235294117647]), # mediumpurple (#9370DB)
+np.array([0.7215686274509804, 0.5254901960784314, 0.043137254901960784]), # darkgoldenrod (#B8860B)
+np.array([0.39215686274509803, 0.5843137254901961, 0.9294117647058824]), # cornflowerblue (#6495ED)
+np.array([0.8235294117647058, 0.4117647058823529, 0.11764705882352941]), # chocolate (#D2691E)
+np.array([0.0, 0.7490196078431373, 1.0]), # deepskyblue (#00BFFF)
+np.array([1.0, 0.38823529411764707, 0.2784313725490196]), # tomato (#FF6347)
+np.array([0.0, 0.807843137254902, 0.8196078431372549]), # darkturquoise (#00CED1)
+np.array([0.5450980392156862, 0.0, 0.0]), # darkred (#8B0000)
+np.array([0.6980392156862745, 0.13333333333333333, 0.13333333333333333]), # firebrick (#B22222)
+np.array([0.23529411764705882, 0.7019607843137254, 0.44313725490196076]), # mediumseagreen (#3CB371)
+np.array([0.8549019607843137, 0.4392156862745098, 0.8392156862745098]), # orchid (#DA70D6)
+np.array([0.1803921568627451, 0.5450980392156862, 0.3411764705882353]), # seagreen (#2E8B57)
+np.array([1.0, 0.4117647058823529, 0.7058823529411765]), # hotpink (#FF69B4)
+np.array([0.4, 0.803921568627451, 0.6666666666666666]), # mediumaquamarine (#66CDAA)
+np.array([0.5019607843137255, 0.0, 0.0]), # maroon (#800000)
+np.array([0.12549019607843137, 0.6980392156862745, 0.6666666666666666]), # lightseagreen (#20B2AA)
+np.array([1.0, 0.4980392156862745, 0.3137254901960784]), # coral (#FF7F50)
+np.array([0.2823529411764706, 0.23921568627450981, 0.5450980392156862]), # darkslateblue (#483D8B)
+np.array([0.9333333333333333, 0.9098039215686274, 0.6666666666666666]), # palegoldenrod (#EEE8AA)
+np.array([0.0, 0.0, 0.0]), # black (#000000)
+np.array([1.0, 1.0, 0.8784313725490196]), # lightyellow (#FFFFE0)
+np.array([0.6470588235294118, 0.16470588235294117, 0.16470588235294117]), # brown (#A52A2A)
+np.array([0.6862745098039216, 0.9333333333333333, 0.9333333333333333]), # paleturquoise (#AFEEEE)
+np.array([0.5450980392156862, 0.27058823529411763, 0.07450980392156863]), # saddlebrown (#8B4513)
+np.array([0.5294117647058824, 0.807843137254902, 0.9803921568627451]), # lightskyblue (#87CEFA)
+np.array([0.803921568627451, 0.5215686274509804, 0.24705882352941178]), # peru (#CD853F)
+np.array([0.27450980392156865, 0.5098039215686274, 0.7058823529411765]), # steelblue (#4682B4)
+np.array([0.9568627450980393, 0.6431372549019608, 0.3764705882352941]), # sandybrown (#F4A460)
+np.array([0.0, 0.5450980392156862, 0.5450980392156862]), # darkcyan (#008B8B)
+np.array([0.9803921568627451, 0.5019607843137255, 0.4470588235294118]), # salmon (#FA8072)
+np.array([0.0, 0.5019607843137255, 0.5019607843137255]), # teal (#008080)
+np.array([0.803921568627451, 0.3607843137254902, 0.3607843137254902]), # indianred (#CD5C5C)
+np.array([0.5294117647058824, 0.807843137254902, 0.9215686274509803]), # skyblue (#87CEEB)
+np.array([0.6274509803921569, 0.3215686274509804, 0.17647058823529413]), # sienna (#A0522D)
+np.array([0.8784313725490196, 1.0, 1.0]), # lightcyan (#E0FFFF)
+np.array([0.8588235294117647, 0.4392156862745098, 0.5764705882352941]), # palevioletred (#DB7093)
+np.array([0.3333333333333333, 0.4196078431372549, 0.1843137254901961]), # darkolivegreen (#556B2F)
+np.array([0.8666666666666667, 0.6274509803921569, 0.8666666666666667]), # plum (#DDA0DD)
+np.array([0.7411764705882353, 0.7176470588235294, 0.4196078431372549]), # darkkhaki (#BDB76B)
+np.array([0.1843137254901961, 0.30980392156862746, 0.30980392156862746]), # darkslategray (#2F4F4F)
+np.array([1.0, 0.6274509803921569, 0.47843137254901963]), # lightsalmon (#FFA07A)
+np.array([0.1843137254901961, 0.30980392156862746, 0.30980392156862746]), # darkslategrey (#2F4F4F)
+np.array([1.0, 0.9803921568627451, 0.803921568627451]), # lemonchiffon (#FFFACD)
+np.array([0.9411764705882353, 0.5019607843137255, 0.5019607843137255]), # lightcoral (#F08080)
+np.array([0.37254901960784315, 0.6196078431372549, 0.6274509803921569]), # cadetblue (#5F9EA0)
+np.array([0.9137254901960784, 0.5882352941176471, 0.47843137254901963]), # darksalmon (#E9967A)
+np.array([0.6901960784313725, 0.8784313725490196, 0.9019607843137255]), # powderblue (#B0E0E6)
+np.array([0.4392156862745098, 0.5019607843137255, 0.5647058823529412]), # slategray (#708090)
+np.array([1.0, 0.8705882352941177, 0.6784313725490196]), # navajowhite (#FFDEAD)
+np.array([1.0, 0.8941176470588236, 0.7098039215686275]), # moccasin (#FFE4B5)
+np.array([0.9607843137254902, 0.8705882352941177, 0.7019607843137254]), # wheat (#F5DEB3)
+np.array([0.5019607843137255, 0.5019607843137255, 0.5019607843137255]), # gray (#808080)
+np.array([0.9411764705882353, 1.0, 0.9411764705882353]), # honeydew (#F0FFF0)
+np.array([0.7372549019607844, 0.5607843137254902, 0.5607843137254902]), # rosybrown (#BC8F8F)
+np.array([0.5607843137254902, 0.7372549019607844, 0.5607843137254902]), # darkseagreen (#8FBC8F)
+np.array([1.0, 0.7137254901960784, 0.7568627450980392]), # lightpink (#FFB6C1)
+np.array([0.6784313725490196, 0.8470588235294118, 0.9019607843137255]), # lightblue (#ADD8E6)
+np.array([0.8705882352941177, 0.7215686274509804, 0.5294117647058824]), # burlywood (#DEB887)
+np.array([0.6901960784313725, 0.7686274509803922, 0.8705882352941177]), # lightsteelblue (#B0C4DE)
+np.array([0.8235294117647058, 0.7058823529411765, 0.5490196078431373]), # tan (#D2B48C)
+np.array([0.9019607843137255, 0.9019607843137255, 0.9803921568627451]), # lavender (#E6E6FA)
+np.array([1.0, 0.8549019607843137, 0.7254901960784313]), # peachpuff (#FFDAB9)
+np.array([0.8470588235294118, 0.7490196078431373, 0.8470588235294118]), # thistle (#D8BFD8)
+np.array([1.0, 0.8941176470588236, 0.7686274509803922]), # bisque (#FFE4C4)
+np.array([0.6627450980392157, 0.6627450980392157, 0.6627450980392157]), # darkgray (#A9A9A9)
+np.array([1.0, 0.7529411764705882, 0.796078431372549]), # pink (#FFC0CB)
+np.array([0.9411764705882353, 1.0, 1.0]), # azure (#F0FFFF)
+np.array([0.6627450980392157, 0.6627450980392157, 0.6627450980392157]), # darkgrey (#A9A9A9)
+np.array([1.0, 0.9215686274509803, 0.803921568627451]), # blanchedalmond (#FFEBCD)
+np.array([0.7529411764705882, 0.7529411764705882, 0.7529411764705882]), # silver (#C0C0C0)
+np.array([1.0, 0.9372549019607843, 0.8352941176470589]), # papayawhip (#FFEFD5)
+np.array([0.9607843137254902, 0.9607843137254902, 0.8627450980392157]), # beige (#F5F5DC)
+np.array([0.8274509803921568, 0.8274509803921568, 0.8274509803921568]), # lightgrey (#D3D3D3)
+np.array([1.0, 0.9411764705882353, 0.9607843137254902]), # lavenderblush (#FFF0F5)
+np.array([0.9803921568627451, 0.9411764705882353, 0.9019607843137255]), # linen (#FAF0E6)
+np.array([1.0, 0.8941176470588236, 0.8823529411764706]), # mistyrose (#FFE4E1)
+np.array([1.0, 0.9607843137254902, 0.9333333333333333]), # seashell (#FFF5EE)
+
+]
 save = True
 
 
 class Analysis(object):
     def __init__(self, model_dir, data_type, normalization_method='max'):
-        hp = tools.load_hp(model_dir)
-
-        # If not computed, use variance.py
-        fname = os.path.join(model_dir, 'variance_' + data_type + '.pkl')
-        res = tools.load_pickle(fname)
-        h_var_all_ = res['h_var_all']
-        self.keys  = res['keys']
+        #check if model_dir is a list of directories
+        if isinstance(model_dir, list):
+            h_var_all_ = []
+            keys = []
+            for md in model_dir:
+                 # If not computed, use variance.py
+                fname = os.path.join(md, 'variance_' + data_type + '.pkl')
+                res = tools.load_pickle(fname)
+                h_var_all_temp = res['h_var_all']# n_units x n_rules/n_epochs
+                keys_temp  = res['keys']
+                h_var_all_.append(h_var_all_temp)
+                keys.append(keys_temp)
+            h_var_all_ = np.concatenate(h_var_all_, axis=1)
+            self.keys = keys
+            self.model_dir = model_dir[0]
+            self.hp = tools.load_hp(self.model_dir)
+            self.concat_dirs = True
+            #unpack all the keys
+            self.rules = [subkey for key in keys for subkey in key]
+        else:
+            hp = tools.load_hp(model_dir)
+            # If not computed, use variance.py
+            fname = os.path.join(model_dir, 'variance_' + data_type + '.pkl')
+            res = tools.load_pickle(fname)
+            h_var_all_ = res['h_var_all']# n_units x n_rules/n_epochs
+            self.keys  = res['keys']
+            self.model_dir = model_dir
+            self.hp = hp
+            self.rules = hp['rules']
+            self.concat_dirs = False
 
         # First only get active units. Total variance across tasks larger than 1e-3
         # ind_active = np.where(h_var_all_.sum(axis=1) > 1e-2)[0]
@@ -93,13 +288,17 @@ class Analysis(object):
             labels_list.append(labels)
 
         scores = np.array(scores)
+        #penalize by number of clusters
+        lambda_ = 0.1
+        pen_scores = scores - np.log(n_clusters)*lambda_
 
         # Heuristic elbow method
         # Choose the number of cluster when Silhouette score first falls
         # Choose the number of cluster when Silhouette score is maximum
         if data_type == 'rule':
             #i = np.where((scores[1:]-scores[:-1])<0)[0][0]
-            i = np.argmax(scores)
+            # i = np.argmax(scores)
+            i = np.argmax(pen_scores)
         else:
             # The more rigorous method doesn't work well in this case
             i = n_clusters.index(10)
@@ -159,23 +358,28 @@ class Analysis(object):
 
         self.n_clusters = n_clusters
         self.scores = scores
+        self.pen_scores = pen_scores
         self.n_cluster = n_cluster
 
         self.h_var_all = h_var_all
         self.normalization_method = normalization_method
         self.labels = labels
         self.unique_labels = np.unique(labels)
-
-        self.model_dir = model_dir
-        self.hp = hp
         self.data_type = data_type
-        self.rules = hp['rules']
 
-    def plot_cluster_score(self, save_name=None):
+    def plot_cluster_score(self, save_name=None, save=False):
         """Plot the score by the number of clusters."""
-        fig = plt.figure(figsize=(2, 2))
+        fig = plt.figure(figsize=(4, 4))
         ax = fig.add_axes([0.3, 0.3, 0.55, 0.55])
-        ax.plot(self.n_clusters, self.scores, 'o-', ms=3)
+        ax.plot(self.n_clusters, self.scores, 'o-', ms=3, color='tab:blue')
+        ax.tick_params(axis='y', labelcolor='tab:blue')
+        #create twin axis
+        ax2 = ax.twinx()
+        ax2.plot(self.n_clusters, self.pen_scores, 'o-', ms=3, color='tab:red')
+        ax2.set_ylabel('Penalized score', fontsize=7)
+        #color the twin axis labels and ticks and axis
+        ax2.tick_params(axis='y', labelcolor='tab:red')
+
         ax.set_xlabel('Number of clusters', fontsize=7)
         ax.set_ylabel('Silhouette score', fontsize=7)
         ax.set_title('Chosen number of clusters: {:d}'.format(self.n_cluster),
@@ -184,7 +388,11 @@ class Analysis(object):
         ax.spines["top"].set_visible(False)
         ax.xaxis.set_ticks_position('bottom')
         ax.yaxis.set_ticks_position('left')
-        ax.set_ylim([0, 0.32])
+        #manually construct the legend
+        handles = [Line2D([0], [0], color='tab:blue', lw=1, label='Silhouette score'),
+                     Line2D([0], [0], color='tab:red', lw=1, label='Penalized score')]
+        ax.legend(handles=handles, loc='lower right', fontsize=7)
+        # ax.set_ylim([0, 0.32])
         if save:
             fig_name = 'cluster_score'
             if save_name is None:
@@ -198,13 +406,14 @@ class Analysis(object):
         ######################### Plotting Variance ###################################
         # Plot Normalized Variance
         if self.data_type == 'rule':
+            # figsize = (4.5,5.5)
             figsize = (3.5,2.5)
             rect = [0.25, 0.2, 0.6, 0.7]
             rect_color = [0.25, 0.15, 0.6, 0.05]
             rect_cb = [0.87, 0.2, 0.03, 0.7]
             tick_names = [rule_name[r] for r in self.rules]
             fs = 6
-            labelpad = 13
+            labelpad = 22
         elif self.data_type == 'epoch':
             figsize = (3.5,4.5)
             rect = [0.25, 0.1, 0.6, 0.85]
@@ -226,7 +435,7 @@ class Analysis(object):
         plt.yticks(range(len(tick_names)), tick_names,
                    rotation=0, va='center', fontsize=fs)
         plt.xticks([])
-        plt.title('Units', fontsize=7, y=0.97)
+        plt.title('Units', fontsize=7, y=0.99)
         plt.xlabel('Clusters', fontsize=7, labelpad=labelpad)
         ax.tick_params('both', length=0)
         for loc in ['bottom','top','left','right']:
@@ -247,13 +456,18 @@ class Analysis(object):
 
         # Plot color bars indicating clustering
         if True:
+            if len(self.unique_labels) > len(kelly_colors):
+                colors = kelly_expanded#get_maximally_contrastive_colors(len(self.unique_labels)+1, light_threshold=95, dark_threshold=5)
+            else:
+                colors = kelly_colors
+
             ax = fig.add_axes(rect_color)
             for il, l in enumerate(self.unique_labels):
                 ind_l = np.where(labels==l)[0][[0, -1]]+np.array([0,1])
                 ax.plot(ind_l, [0,0], linewidth=4, solid_capstyle='butt',
-                        color=kelly_colors[il+1])
+                        color=colors[il+1])
                 ax.text(np.mean(ind_l), -0.5, str(il+1), fontsize=6,
-                        ha='center', va='top', color=kelly_colors[il+1])
+                        ha='center', va='top', color=colors[il+1])
             ax.set_xlim([0, len(labels)])
             ax.set_ylim([-1, 1])
             ax.axis('off')
@@ -263,7 +477,12 @@ class Analysis(object):
                         '_norm' + self.normalization_method)
             if save_name is not None:
                 fig_name = fig_name + save_name
-            plt.savefig('figure/'+fig_name+'.pdf', transparent=True)
+            #join with the model directory
+            fig_path = os.path.join(self.model_dir, 'figure/'+fig_name+'.pdf')
+            #check if the figure directory exists, if not, create it
+            if not os.path.exists(os.path.join(self.model_dir, 'figure')):
+                os.makedirs(os.path.join(self.model_dir, 'figure'))
+            plt.savefig(fig_path, transparent=True)
         plt.show()
 
     def plot_similarity_matrix(self):
@@ -299,7 +518,7 @@ class Analysis(object):
             plt.savefig('figure/feature_similarity_by'+self.data_type+'.pdf', transparent=True)
         plt.show()
 
-    def plot_2Dvisualization(self, method='TSNE'):
+    def plot_2Dvisualization(self, method='tSNE'):
         labels = self.labels
         ######################## Plotting 2-D visualization of variance map ###########
         from sklearn.manifold import TSNE, MDS, LocallyLinearEmbedding
@@ -319,14 +538,24 @@ class Analysis(object):
 
         Y = model.fit_transform(self.h_normvar_all)
 
+        if len(self.unique_labels) > len(kelly_colors):
+            colors = kelly_expanded#get_maximally_contrastive_colors(len(self.unique_labels)+1, light_threshold=95, dark_threshold=5)
+        else:
+            colors = kelly_colors
+
         fig = plt.figure(figsize=(2, 2))
         ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
         for il, l in enumerate(self.unique_labels):
             ind_l = np.where(labels==l)[0]
-            ax.scatter(Y[ind_l, 0], Y[ind_l, 1], color=kelly_colors[il+1], s=10)
+            ax.scatter(Y[ind_l, 0], Y[ind_l, 1], color=colors[il+1], s=10)
         ax.axis('off')
         plt.title(method, fontsize=7)
+        #check if the figure directory exists in the model directory
+        if not os.path.exists(os.path.join(self.model_dir, 'figure')):
+            os.makedirs(os.path.join(self.model_dir, 'figure'))
+        #combine figname with the model directory
         figname = 'figure/taskvar_visual_by'+method+self.data_type+'.pdf'
+        figname = os.path.join(self.model_dir, figname)
         if save:
             plt.savefig(figname, transparent=True)
         plt.show()
@@ -548,7 +777,7 @@ class Analysis(object):
             _ = plt.yticks(range(len(tick_names)), tick_names,
                        rotation=0, va='center', fontsize=fs)
             plt.xticks([])
-            plt.xlabel('Clusters', fontsize=7, labelpad=13)
+            plt.xlabel('Clusters', fontsize=7, labelpad=25)
             ax.tick_params('both', length=0)
             for loc in ['bottom','top','left','right']:
                 ax.spines[loc].set_visible(False)

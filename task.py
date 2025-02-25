@@ -10,7 +10,7 @@ rules_dict = \
     {'all' : ['fdgo', 'reactgo', 'delaygo', 'fdanti', 'reactanti', 'delayanti',
               'dm1', 'dm2', 'contextdm1', 'contextdm2', 'multidm',
               'delaydm1', 'delaydm2', 'contextdelaydm1', 'contextdelaydm2', 'multidelaydm',
-              'dmsgo', 'dmsnogo', 'dmcgo', 'dmcnogo'],
+              'dmsgo', 'dmsnogo', 'dmcgo', 'dmcnogo', 'random', 'random_mod'],
 
     'mante' : ['contextdm1', 'contextdm2'],
 
@@ -134,37 +134,46 @@ class Trial(object):
         as the pre period
         """
 
-        pre_on   = int(100/self.dt) # never check the first 100ms
-        pre_offs = self.expand(pre_offs)
-        post_ons = self.expand(post_ons)
-
-        if self.config['loss_type'] == 'lsq':
-            c_mask = np.zeros((self.tdim, self.batch_size, self.n_output), dtype=self.float_type)
-            for i in range(self.batch_size):
-                # Post response periods usually have the same length across tasks
-                c_mask[post_ons[i]:, i, :] = 5.
-                # Pre-response periods usually have different lengths across tasks
-                # To keep cost comparable across tasks
-                # Scale the cost mask of the pre-response period by a factor
-                c_mask[pre_on:pre_offs[i], i, :] = 1.
-
-            # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-            c_mask[:, :, 0] *= 2. # Fixation is important
-
-            self.c_mask = c_mask.reshape((self.tdim*self.batch_size, self.n_output))
+        
+        if (pre_offs is None) and (post_ons is None):
+            if self.config['loss_type'] == 'lsq':
+                c_mask = np.zeros((self.tdim, self.batch_size, self.n_output), dtype=self.float_type)
+                self.c_mask = c_mask.reshape((self.tdim*self.batch_size, self.n_output))
+            else:
+                c_mask = np.zeros((self.tdim, self.batch_size), dtype=self.float_type)
+                self.c_mask = c_mask.reshape((self.tdim*self.batch_size,))
         else:
-            c_mask = np.zeros((self.tdim, self.batch_size), dtype=self.float_type)
-            for i in range(self.batch_size):
-                # Post response periods usually have the same length across tasks
-                # Having it larger than 1 encourages the network to achieve higher performance
-                c_mask[post_ons[i]:, i] = 5.
-                # Pre-response periods usually have different lengths across tasks
-                # To keep cost comparable across tasks
-                # Scale the cost mask of the pre-response period by a factor
-                c_mask[pre_on:pre_offs[i], i] = 1.
+            pre_on   = int(100/self.dt) # never check the first 100ms
+            pre_offs = self.expand(pre_offs)
+            post_ons = self.expand(post_ons)
+        
+            if self.config['loss_type'] == 'lsq':
+                c_mask = np.zeros((self.tdim, self.batch_size, self.n_output), dtype=self.float_type)
+                for i in range(self.batch_size):
+                    # Post response periods usually have the same length across tasks
+                    c_mask[post_ons[i]:, i, :] = 5.
+                    # Pre-response periods usually have different lengths across tasks
+                    # To keep cost comparable across tasks
+                    # Scale the cost mask of the pre-response period by a factor
+                    c_mask[pre_on:pre_offs[i], i, :] = 1.
 
-            self.c_mask = c_mask.reshape((self.tdim*self.batch_size,))
-            self.c_mask /= self.c_mask.mean()
+                # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
+                c_mask[:, :, 0] *= 2. # Fixation is important
+
+                self.c_mask = c_mask.reshape((self.tdim*self.batch_size, self.n_output))
+            else:
+                c_mask = np.zeros((self.tdim, self.batch_size), dtype=self.float_type)
+                for i in range(self.batch_size):
+                    # Post response periods usually have the same length across tasks
+                    # Having it larger than 1 encourages the network to achieve higher performance
+                    c_mask[post_ons[i]:, i] = 5.
+                    # Pre-response periods usually have different lengths across tasks
+                    # To keep cost comparable across tasks
+                    # Scale the cost mask of the pre-response period by a factor
+                    c_mask[pre_on:pre_offs[i], i] = 1.
+
+                self.c_mask = c_mask.reshape((self.tdim*self.batch_size,))
+                self.c_mask /= self.c_mask.mean()
 
     def add_rule(self, rule, on=None, off=None, strength=1.):
         """Add rule input."""
@@ -207,6 +216,49 @@ def test_init(config, mode, **kwargs):
     trial = Trial(config, tdim, batch_size)
     trial.add('fix_in', offs=fix_offs)
 
+    return trial
+
+def random(config, mode=None, **kwargs):
+    '''
+    Random task. Fixation is on then off.
+    '''
+    dt = config['dt']
+    tdim = int(10000/dt)
+    batch_size = kwargs['batch_size']
+
+    trial = Trial(config, tdim, batch_size)
+    trial.add_x_noise()
+    trial.add_c_mask(None, None)
+
+    return trial
+
+
+def random_mod(config, mode=None, **kwargs):
+    '''Random noise in modules 1 and 2. 
+    Uses rule for task channel and fixation is on'''
+
+    
+    dt = config['dt']
+    tdim = int(10000/dt)
+    batch_size = 32
+    
+    # Initialize the trial
+    trial = Trial(config, tdim, batch_size)
+
+
+    # Add random noise to mod1 and mod2
+    mod1_noise = np.random.uniform(0, 1, (tdim, batch_size, config['n_eachring']))
+    mod2_noise = np.random.uniform(0, 1, (tdim, batch_size, config['n_eachring']))
+    
+    for i in range(batch_size):
+        trial.x[:, i, 1:1 + config['n_eachring']] += mod1_noise[:, i, :]
+        trial.x[:, i, 1 + config['n_eachring']:1 + 2 * config['n_eachring']] += mod2_noise[:, i, :]
+    
+    #trial.add('stim', stim_locs, ons=stim_ons, offs=stim_offs, mods=mod1_noise)
+    #trial.add_x_noise()
+    trial.add_c_mask(None, None)
+    trial.x[:, :, 0] = 0#zero out fix
+    
     return trial
 
 
@@ -1538,7 +1590,9 @@ rule_mapping = {'testinit': test_init,
                 'dmcgo': dmcgo,
                 'dmcnogo': dmcnogo,
                 'oic': oic,
-                'dmc': delaymatchcategory_original}
+                'dmc': delaymatchcategory_original,
+                'random':random,
+                'random_mod' : random_mod}
 
 rule_name    = {'reactgo': 'RT Go',
                 'delaygo': 'Dly Go',
@@ -1561,8 +1615,9 @@ rule_name    = {'reactgo': 'RT Go',
                 'dmcgo': 'DMC',
                 'dmcnogo': 'DNMC',
                 'oic': '1IC',
-                'dmc': 'DMC'
-                }
+                'dmc': 'DMC',
+                'random': 'rand',
+                'random_mod': 'rand_mod'}
 
 
 def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
@@ -1594,9 +1649,10 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
     if 'replace_rule' in kwargs:
         rule = kwargs['replace_rule']
 
-    if rule is 'testinit':
+    if rule is 'testinit' or rule is 'random':
         # Add no rule
         return trial
+    
 
     if isinstance(rule, six.string_types):
         # rule is not iterable
@@ -1614,9 +1670,11 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
             rule_strength = [1.] * len(rule)
 
     #turn off adding rule here
-    if not ('no_rule' in kwargs and kwargs['no_rule']):
-        for r, s in zip(rule, rule_strength):
-            trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
+    if (not ('no_rule' in kwargs and kwargs['no_rule'])):
+            for r, s in zip(rule, rule_strength):
+                if (not (r in ['random', 'random_mod'])):
+                    print(r)
+                    trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
 
     if noise_on:
         trial.add_x_noise()

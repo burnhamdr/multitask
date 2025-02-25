@@ -21,11 +21,12 @@ def easy_activity_plot(model_dir, rule):
 
     model = Model(model_dir)
     hp = model.hp
+    bs = hp['batch_size_test']
 
     with tf.Session() as sess:
         model.restore()
 
-        trial = generate_trials(rule, hp, mode='test')
+        trial = generate_trials(rule, hp, mode='test',batch_size=bs)
         feed_dict = tools.gen_feed_dict(model, trial, hp)
         h, y_hat = sess.run([model.h, model.y_hat], feed_dict=feed_dict)
         # All matrices have shape (n_time, n_condition, n_neuron)

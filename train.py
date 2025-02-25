@@ -253,7 +253,6 @@ def train(model_dir,
         rule_prob = np.array(
                 [rule_prob_map.get(r, 1.) for r in hp['rule_trains']])
         hp['rule_probs'] = list(rule_prob/np.sum(rule_prob))
-    tools.save_hp(hp, model_dir)
 
     # Build the model
     if pretrained_dir is not None:
@@ -261,6 +260,7 @@ def train(model_dir,
         #check that the model hyper parameters are the same as the pretrained model
         assert tools.align_hp(hp, pretrained_hp)
         hp['pretrained_dir'] = pretrained_dir
+        tools.save_hp(hp, model_dir)
         pre_trained_model = Model(pretrained_dir)
 
         with tf.Session() as sess:
@@ -316,7 +316,8 @@ def train(model_dir,
             if 'output/biases:0' in apply_pretrained_params:
                 bias_ind = pre_trained_params_names.index('output/biases:0')
                 hp['b_out_init'] = pre_trained_params[bias_ind]
-
+    else:
+        tools.save_hp(hp, model_dir)
 
     model = Model(model_dir, hp=hp)
 
