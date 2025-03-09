@@ -1673,7 +1673,7 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
     if (not ('no_rule' in kwargs and kwargs['no_rule'])):
             for r, s in zip(rule, rule_strength):
                 if (not (r in ['random', 'random_mod'])):
-                    print(r)
+                    #print(r)
                     trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
 
     if noise_on:

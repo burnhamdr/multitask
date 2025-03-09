@@ -320,7 +320,6 @@ def train(model_dir,
         tools.save_hp(hp, model_dir)
 
     model = Model(model_dir, hp=hp)
-
     # Display hp
     for key, val in hp.items():
         print('{:20s} = '.format(key) + str(val))
