@@ -102,6 +102,7 @@ def save_log(log):
 def load_hp(model_dir):
     """Load the hyper-parameter file of model save_name"""
     fname = os.path.join(model_dir, 'hp.json')
+    print(fname)
     if not os.path.isfile(fname):
         fname = os.path.join(model_dir, 'hparams.json')  # backward compat
         if not os.path.isfile(fname):

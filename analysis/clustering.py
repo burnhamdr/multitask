@@ -297,8 +297,8 @@ class Analysis(object):
         # Choose the number of cluster when Silhouette score is maximum
         if data_type == 'rule':
             #i = np.where((scores[1:]-scores[:-1])<0)[0][0]
-            # i = np.argmax(scores)
-            i = np.argmax(pen_scores)
+            i = np.argmax(scores)
+            #i = np.argmax(pen_scores)
         else:
             # The more rigorous method doesn't work well in this case
             i = n_clusters.index(10)
@@ -486,6 +486,95 @@ class Analysis(object):
             plt.savefig(fig_path, transparent=True)
 
         plt.show()
+
+    def plot_compositional_variance(self, save_name=None):
+        labels = self.labels
+        ######################### Plotting Variance ###################################
+        # Plot Normalized Variance
+        if self.data_type == 'rule':
+            # figsize = (4.5,5.5)
+            figsize = (3.5,2.5)
+            rect = [0.25, 0.2, 0.6, 0.7]
+            rect_color = [0.25, 0.15, 0.6, 0.05]
+            rect_cb = [0.87, 0.2, 0.03, 0.7]
+            tick_names = [int(i*10)/10 for i in np.linspace(0,1,11).tolist()]
+            #tick_names = [abs(rule_name[r]) for r in self.rules]
+            fs = 6
+            labelpad = 22
+        elif self.data_type == 'epoch':
+            figsize = (3.5,4.5)
+            rect = [0.25, 0.1, 0.6, 0.85]
+            rect_color = [0.25, 0.05, 0.6, 0.05]
+            rect_cb = [0.87, 0.1, 0.03, 0.85]
+            tick_names = [rule_name[key[0]]+' '+key[1] for key in self.keys]
+            fs = 5
+            labelpad = 20
+        else:
+            raise ValueError
+
+        h_plot  = self.h_normvar_all.T
+        vmin, vmax = 0, 1
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_axes(rect)
+        im = ax.imshow(h_plot, cmap='hot',
+                       aspect='auto', interpolation='nearest', vmin=vmin, vmax=vmax)
+
+        plt.yticks(range(len(tick_names)), tick_names,
+                   rotation=0, va='center', fontsize=fs)
+        plt.xticks([])
+        plt.title('Units', fontsize=7, y=0.99)
+        plt.xlabel('Clusters', fontsize=7, labelpad=labelpad)
+        plt.ylabel('Gamma (= a)', fontsize=7)
+        ax.tick_params('both', length=0)
+        for loc in ['bottom','top','left','right']:
+            ax.spines[loc].set_visible(False)
+        ax = fig.add_axes(rect_cb)
+        cb = plt.colorbar(im, cax=ax, ticks=[vmin,vmax])
+        cb.outline.set_linewidth(0.5)
+        if self.normalization_method == 'sum':
+            clabel = 'Normalized Task Variance'
+        elif self.normalization_method == 'max':
+            clabel = 'Normalized Task Variance'
+        elif self.normalization_method == 'none':
+            clabel = 'Variance'
+
+        cb.set_label(clabel, fontsize=7, labelpad=0)
+        plt.tick_params(axis='both', which='major', labelsize=7)
+        
+
+        # Plot color bars indicating clustering
+        if True:
+            if len(self.unique_labels) > len(kelly_colors):
+                colors = kelly_expanded#get_maximally_contrastive_colors(len(self.unique_labels)+1, light_threshold=95, dark_threshold=5)
+            else:
+                colors = kelly_colors
+
+            ax = fig.add_axes(rect_color)
+            for il, l in enumerate(self.unique_labels):
+                ind_l = np.where(labels==l)[0][[0, -1]]+np.array([0,1])
+                ax.plot(ind_l, [0,0], linewidth=4, solid_capstyle='butt',
+                        color=colors[il+1])
+                ax.text(np.mean(ind_l), -0.5, str(il+1), fontsize=6,
+                        ha='center', va='top', color=colors[il+1])
+            ax.set_xlim([0, len(labels)])
+            ax.set_ylim([-1, 1])
+            ax.axis('off')
+
+        if save:
+            fig_name = ('feature_map_by' + self.data_type +
+                        '_norm' + self.normalization_method)
+            if save_name is not None:
+                fig_name = fig_name + save_name
+
+            #join with the model directory
+            fig_path = os.path.join(self.model_dir, 'figure/'+fig_name+'.pdf')
+            #check if the figure directory exists, if not, create it
+            if not os.path.exists(os.path.join(self.model_dir, 'figure')):
+                os.makedirs(os.path.join(self.model_dir, 'figure'))
+            plt.savefig(fig_path, transparent=True)
+
+        plt.show()
+
 
     def plot_similarity_matrix(self):
         labels = self.labels
@@ -715,6 +804,10 @@ class Analysis(object):
 
                 perfs_store = list()
                 cost_store = list()
+                
+                print('SELF.RULES')
+                print(self.rules)
+
                 for rule in self.rules:
                     n_rep = 16
                     batch_size_test = 256

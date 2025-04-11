@@ -40,6 +40,7 @@ def popvec(y):
     temp_cos = np.sum(y*np.cos(pref), axis=-1)/temp_sum
     temp_sin = np.sum(y*np.sin(pref), axis=-1)/temp_sum
     loc = np.arctan2(temp_sin, temp_cos)
+    #print(loc)
     return np.mod(loc, 2*np.pi)
 
 
@@ -878,6 +879,7 @@ class Model(object):
         # This lesioning will work for both RNN and GRU
         n_input = self.hp['n_input']
         for v in self.var_list:
+            
             if 'kernel' in v.name or 'weight' in v.name:
                 # Connection weights
                 v_val = sess.run(v)
@@ -893,3 +895,42 @@ class Model(object):
             print('Lesioned units:')
             print(units)
 
+    def set_unit_activations(self, sess, units, activations, verbose=False):
+        """Set activations of given units to the values given by activations
+
+        Args:
+            sess: tensorflow session
+            units : can be None, an integer index, or a list of integer indices
+        """
+
+        # Convert to numpy array
+        if units is None:
+            return
+        elif not hasattr(units, '__iter__'):
+            units = np.array([units])
+        else:
+            units = np.array(units)
+
+        # This lesioning will work for both RNN and GRU
+        n_input = self.hp['n_input']
+        for v in self.var_list:
+        
+            v_val = sess.run(v)
+            if 'kernel' in v.name or 'weight' in v.name:
+                # Connection weights
+                
+                if 'output' in v.name:
+                    # output weights
+                    #v_val[units, :] = activations
+                    continue
+                elif 'rnn' in v.name:
+                    # recurrent weights
+                    v_val[n_input + units, :] = 0
+
+                sess.run(v.assign(v_val))
+
+            elif 'bias' in v.name and 'rnn' in v.name:
+
+                v_val[units] = activations
+
+                sess.run(v.assign(v_val))

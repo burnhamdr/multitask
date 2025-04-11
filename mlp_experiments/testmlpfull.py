@@ -8,12 +8,13 @@ from mlp_aux import preprocessing
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
-all_tasks=['odd','firsthalf','prime']
+all_tasks=['odd','firsthalf','prime','notodd','notfirsthalf']
 num_epochs=10
 batch_size=64
-learning_rate=0.001
-train_tasks=['odd','firsthalf','prime']
-model_dir='./../../models/mlp_models/odd_firsthalf_prime4'
+learning_rate=0.005
+num_neurons=32
+train_tasks=['odd','firsthalf','prime','notodd','notfirsthalf']
+model_dir='./../../models/mlp_models/odd_notodd_firsthalf_notfirsthalf_prime_full_10-32_005'
 
 # Load data
 train_set,_=datasets.mnist.load_data()
@@ -27,9 +28,19 @@ train_labels, val_labels = train_labels[:split_index], train_labels[split_index:
 
 model = models.Sequential([
     layers.InputLayer(input_shape=(784+len(all_tasks),)),
-    #layers.Dense(32, activation='relu'),
-    layers.Dense(16, activation='relu'),
-    layers.Dense(1, activation='sigmoid')
+
+    layers.Dense(num_neurons, activation='relu'),
+    layers.Dense(num_neurons, activation='relu'),
+    layers.Dense(num_neurons, activation='relu'),
+    layers.Dense(num_neurons, activation='relu'),
+    layers.Dense(num_neurons, activation='relu'),
+    layers.Dense(num_neurons, activation='relu'),
+    layers.Dense(num_neurons, activation='relu'),
+    layers.Dense(num_neurons, activation='relu'),
+    layers.Dense(num_neurons, activation='relu'),
+    layers.Dense(num_neurons, activation='relu'),
+                                        
+    layers.Dense(1, activation='sigmoid'),
 ])
 
 model.load_weights(os.path.join(model_dir,'model_weights.h5'))
@@ -52,13 +63,22 @@ for task in train_tasks:
 for task in train_tasks:
     print(f'{task} validation accuracy: \t', val_history[task][1])
 
-test_rule_inputs={'Is the number Odd?':[1,0,0],
-                    'Is the number in the first half?':[0,1,0],
-                    'Is the number prime?':[0,0,1],
-                    'Is the nubmer Odd? \nAND\n Is the number in the first half?':[1,1,0],
-                    'Is the number in the first half? \nAND\n Is the number prime?': [0,1,1],
-                    'Is the number Odd? \nAND\n Is the number prime?':[1,0,1],
-                    'Is the number Odd? \nAND\n Is the number in the first half? \nAND\n Is then number prime?':[1,1,1]}
+test_rule_inputs={'Is the number Odd?':[1,0,0,0,0],
+                    'Is the number in the first half?':[0,1,0,0,0],
+                    'Is the number prime?':[0,0,1,0,0],
+                    'Is the nubmer Odd? \nAND\n Is the number in the first half?':[1,1,0,0,0],
+                    'Is the number in the first half? \nAND\n Is the number prime?': [0,1,1,0,0],
+                    'Is the number Odd? \nAND\n Is the number prime?':[1,0,1,0,0],
+                    'Is the number Odd? \nAND\n Is the number in the first half? \nAND\n Is then number prime?':[1,1,1,0,0],
+                    'not odd':[0,0,0,1,0],
+                    'not firsthalf':[0,0,0,0,1],
+                    '-odd':[-1,0,0,0,0],
+                    '-firsthalf':[0,-1,0,0,0],
+                    '-prime':[0,0,-1,0,0],
+                    'not odd-odd+prime':[-1,0,1,1,0],
+                    'not odd+odd+prime':[1,0,1,1,0],
+                    '-not odd+odd+prime':[1,0,1,-1,0],
+                    'not odd+odd-prime':[1,0,-1,1,0]}
 
 for text in test_rule_inputs:
 

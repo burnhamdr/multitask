@@ -8,6 +8,18 @@ def get_real_label(original_label,task):
         new_label=original_label<5
     if task=='prime':
         new_label=1 if original_label in [2,3,5,7] else 0
+    if task=='notodd':
+        new_label=not get_real_label(original_label,'odd')
+    if task=='notfirsthalf':
+        new_label=not get_real_label(original_label,'firsthalf')
+    if task=='notprime':
+        new_label=not get_real_label(original_label,'prime')
+    if task=='under3':
+        new_label=original_label<3
+    if task=='notunder3':
+        new_label=original_label>=3
+    if task=='under7':
+        new_label=original_label<7
 
     return new_label
 

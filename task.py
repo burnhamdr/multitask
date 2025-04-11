@@ -47,6 +47,26 @@ def get_dist(original_dist):
 class Trial(object):
     """Class representing a batch of trials."""
 
+    def __str__(self,config=False,show_xy=False):
+
+        print(f'Float Type:\t{self.float_type}')
+        
+        if config:
+            for el in self.config:
+                print(f'{el}:\t{self.config[el]}')
+        
+        #print(f'Preferences:\t{self.pref}')
+        print(f'Batch Size:\t{self.batch_size}')
+        print(f'Tdim:\t{self.tdim}')
+        print(f'X shape:\t{self.x.shape}')
+        print(f'Y shape:\t{self.y.shape}')
+
+        if show_xy:
+            print(f'X:\t{self.x}')
+            print(f'Y:\t{self.y}')
+
+        return
+
     def __init__(self, config, tdim, batch_size):
         """A batch of trials.
 
@@ -1621,6 +1641,7 @@ rule_name    = {'reactgo': 'RT Go',
 
 
 def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
+    #print('aaaa ', rule)
     """Generate one batch of data.
 
     Args:
@@ -1646,7 +1667,7 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
         rule_off = None
 
     # overwrite current rule for input
-    if 'replace_rule' in kwargs:
+    if 'replace_rule' in kwargs and kwargs['replace_rule'] != None:
         rule = kwargs['replace_rule']
 
     if rule is 'testinit' or rule is 'random':
@@ -1657,7 +1678,7 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
     if isinstance(rule, six.string_types):
         # rule is not iterable
         # Expand to list
-        if 'rule_strength' in kwargs:
+        if 'rule_strength' in kwargs and kwargs['rule_strength']!=None:
             rule_strength = [kwargs['rule_strength']]
         else:
             rule_strength = [1.]
@@ -1671,6 +1692,7 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
 
     #turn off adding rule here
     if (not ('no_rule' in kwargs and kwargs['no_rule'])):
+            #print(rule)
             for r, s in zip(rule, rule_strength):
                 if (not (r in ['random', 'random_mod'])):
                     #print(r)

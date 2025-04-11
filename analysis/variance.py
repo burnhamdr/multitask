@@ -20,7 +20,7 @@ import tools
 save = True
 
 
-def _compute_variance_bymodel(model, sess, rules=None, random_rotation=False):
+def _compute_variance_bymodel(model, sess, rules=None, random_rotation=False, replace_rule=None, rule_strengths=None):
     """Compute variance for all tasks.
 
         Args:
@@ -44,20 +44,39 @@ def _compute_variance_bymodel(model, sess, rules=None, random_rotation=False):
         from scipy.stats import ortho_group
         random_ortho_matrix = ortho_group.rvs(dim=n_hidden)
 
-    for rule in rules:
-        trial = generate_trials(rule, hp, 'test', noise_on=False)
-        feed_dict = tools.gen_feed_dict(model, trial, hp)
-        h = sess.run(model.h, feed_dict=feed_dict)
-        if random_rotation:
-            h = np.dot(h, random_ortho_matrix)  # randomly rotate
+    if rule_strengths==None:
+        for rule in rules:
 
-        for e_name, e_time in trial.epochs.items():
-            if 'fix' not in e_name:  # Ignore fixation period
-                h_all_byepoch[(rule, e_name)] = h[e_time[0]:e_time[1], :,
-                                                :]
+            trial = generate_trials(rule, hp, 'test', noise_on=False, replace_rule=replace_rule, rule_strength=rule_strengths)
+            feed_dict = tools.gen_feed_dict(model, trial, hp)
+            h = sess.run(model.h, feed_dict=feed_dict)
+            if random_rotation:
+                h = np.dot(h, random_ortho_matrix)  # randomly rotate
 
-        # Ignore fixation period
-        h_all_byrule[rule] = h[trial.epochs['fix1'][1]:, :, :]
+            for e_name, e_time in trial.epochs.items():
+                if 'fix' not in e_name:  # Ignore fixation period
+                    h_all_byepoch[(rule, e_name)] = h[e_time[0]:e_time[1], :,
+                                                    :]
+
+            # Ignore fixation period
+            h_all_byrule[rule] = h[trial.epochs['fix1'][1]:, :, :]
+    else:
+        for rule_strength in rule_strengths:
+
+            trial = generate_trials(rules, hp, 'test', noise_on=False, replace_rule=replace_rule, rule_strength=rule_strength)
+            feed_dict = tools.gen_feed_dict(model, trial, hp)
+            h = sess.run(model.h, feed_dict=feed_dict)
+            if random_rotation:
+                h = np.dot(h, random_ortho_matrix)  # randomly rotate
+
+            for e_name, e_time in trial.epochs.items():
+                if 'fix' not in e_name:  # Ignore fixation period
+                    h_all_byepoch[(-rule_strength[0], e_name)] = h[e_time[0]:e_time[1], :,
+                                                    :]
+
+            # Ignore fixation period
+            h_all_byrule[-rule_strength[0]] = h[trial.epochs['fix1'][1]:, :, :]
+
 
     # Reorder h_all_byepoch by epoch-first
     keys = list(h_all_byepoch.keys())
@@ -74,6 +93,8 @@ def _compute_variance_bymodel(model, sess, rules=None, random_rotation=False):
             h_all = h_all_byepoch
         else:
             raise ValueError
+
+        print(h_all)
 
         h_var_all = np.zeros((n_hidden, len(h_all.keys())))
         for i, val in enumerate(h_all.values()):
@@ -94,7 +115,7 @@ def _compute_variance_bymodel(model, sess, rules=None, random_rotation=False):
             pickle.dump(result, f)
 
 
-def _compute_variance(model_dir, rules=None, random_rotation=False):
+def _compute_variance(model_dir, rules=None, random_rotation=False, replace_rule=None, rule_strengths=None):
     """Compute variance for all tasks.
 
     Args:
@@ -105,7 +126,7 @@ def _compute_variance(model_dir, rules=None, random_rotation=False):
     model = Model(model_dir, sigma_rec=0)
     with tf.Session() as sess:
         model.restore()
-        _compute_variance_bymodel(model, sess, rules, random_rotation)
+        _compute_variance_bymodel(model, sess, rules, random_rotation, replace_rule=replace_rule, rule_strengths=rule_strengths)
 
 
 def compute_variance(model_dir, rules=None, random_rotation=False):
