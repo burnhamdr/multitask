@@ -621,9 +621,10 @@ class Model(object):
         if isinstance(hp['w_out_init'], np.ndarray):
             assert hp['w_out_init'].shape == (n_rnn, n_output)
             self._w_out_initializer = tf.constant_initializer(hp['w_out_init'], dtype=tf.float32)
-        else:
-            if hp['w_out_init'] == 'glorot_uniform':
+        elif hp['w_out_init'] == 'glorot_uniform':
                 self._w_out_initializer = init_ops.glorot_uniform_initializer(dtype=tf.float32)
+        elif hp['w_out_init'] == 'randgauss':
+                self._w_out_initializer = init_ops.random_normal_initializer(dtype=tf.float32)
 
         if isinstance(hp['b_out_init'], np.ndarray):
             assert hp['b_out_init'].shape == (n_output,)

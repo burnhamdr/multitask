@@ -349,10 +349,10 @@ def train(model_dir,
             # train rule inputs only
             var_list = [v for v in model.var_list if 'rule_input' in v.name]
         elif trainables == 'rnn_bias':
-            # train biases only
+            # train rnn biases only
             var_list = [v for v in model.var_list if ('rnn' in v.name) and ('bias' in v.name)]#('rnn' in v.name) and ('bias' in v.name)
         elif trainables == 'all_bias':
-            # train rnn weights only
+            # train all biases only
             var_list = [v for v in model.var_list if ('bias' in v.name)]
         elif trainables == 'rnn_bias_and_output_weights':
             # train biases and output weights only
