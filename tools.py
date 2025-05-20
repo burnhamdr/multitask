@@ -121,6 +121,26 @@ def save_hp(hp, model_dir):
     """Save the hyper-parameter file of model save_name"""
     hp_copy = hp.copy()
     hp_copy.pop('rng')  # rng can not be serialized
+
+    #for el in hp_copy:
+    #    print(el, type(hp_copy[el]))
+
+    #print("############################")
+
+    if isinstance(hp_copy['w_in_init'], np.ndarray):
+        hp_copy['w_in_init']=hp_copy['w_in_init'].tolist()
+    if isinstance(hp_copy['w_rec_init'], np.ndarray):
+        hp_copy['w_rec_init']=hp_copy['w_rec_init'].tolist()
+    if isinstance(hp_copy['w_out_init'], np.ndarray):
+        hp_copy['w_out_init']=hp_copy['w_out_init'].tolist()
+    if isinstance(hp_copy['b_rec_init'], np.ndarray):
+        hp_copy['b_rec_init']=hp_copy['b_rec_init'].tolist()
+    if isinstance(hp_copy['b_out_init'], np.ndarray):
+        hp_copy['b_out_init']=hp_copy['b_out_init'].tolist()
+
+    #for el in hp_copy:
+    #    print(el, type(hp_copy[el]))
+
     with open(os.path.join(model_dir, 'hp.json'), 'w') as f:
         json.dump(hp_copy, f)
 

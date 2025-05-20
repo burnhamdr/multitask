@@ -94,7 +94,7 @@ def _compute_variance_bymodel(model, sess, rules=None, random_rotation=False, re
         else:
             raise ValueError
 
-        print(h_all)
+        #print(h_all)
 
         h_var_all = np.zeros((n_hidden, len(h_all.keys())))
         for i, val in enumerate(h_all.values()):

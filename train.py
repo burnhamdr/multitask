@@ -206,6 +206,7 @@ def train(model_dir,
           trainables=None,
           pretrained_dir=None,
           apply_pretrained_params=None,
+          display_hp=True,
           ):
     """Train the network.
 
@@ -226,6 +227,8 @@ def train(model_dir,
 
     tools.mkdir_p(model_dir)
 
+    #print('##################### Folder created #####################')
+
     # Network parameters
     default_hp = get_default_hp(ruleset)
     if hp is not None:
@@ -233,6 +236,8 @@ def train(model_dir,
     hp = default_hp
     hp['seed'] = seed
     hp['rng'] = np.random.RandomState(seed)
+
+    #print('##################### Hp imported #####################')
 
     # Rules to train and test. Rules in a set are trained together
     if rule_trains is None:
@@ -253,6 +258,8 @@ def train(model_dir,
         rule_prob = np.array(
                 [rule_prob_map.get(r, 1.) for r in hp['rule_trains']])
         hp['rule_probs'] = list(rule_prob/np.sum(rule_prob))
+
+    #print('##################### Rules and Rule probs set #####################')
 
     # Build the model
     if pretrained_dir is not None:
@@ -320,9 +327,13 @@ def train(model_dir,
         tools.save_hp(hp, model_dir)
 
     model = Model(model_dir, hp=hp)
+
+    #print('##################### Pretrained model import or model creation finished #####################')
+
     # Display hp
-    for key, val in hp.items():
-        print('{:20s} = '.format(key) + str(val))
+    if display_hp:
+        for key, val in hp.items():
+            print('{:20s} = '.format(key) + str(val))
 
     # Store results
     log = defaultdict(list)
@@ -362,7 +373,10 @@ def train(model_dir,
             var_list = [v for v in model.var_list if ('bias' in v.name) or ('output' in v.name)]
         else:
             raise ValueError('Unknown trainables')
+
         model.set_optimizer(var_list=var_list)
+
+        #print('##################### Trainable variables set #####################')
 
         # penalty on deviation from initial weight
         if hp['l2_weight_init'] > 0:
@@ -372,6 +386,8 @@ def train(model_dir,
                                    tf.nn.l2_loss(w - w_val))
 
             model.set_optimizer(var_list=var_list)
+
+        #print('##################### Deviation penalty set #####################')
 
         # partial weight training
         if ('p_weight_train' in hp and
@@ -389,6 +405,8 @@ def train(model_dir,
                 w_mask = tf.reshape(w_mask, w.shape)
                 model.cost_reg += tf.nn.l2_loss((w - w_val) * w_mask)
             model.set_optimizer(var_list=var_list)
+
+        #print('##################### Partial weight training set (if it should) #####################')
 
         # if trainables == 'bias' and len(hp['rule_trains']) > 1:
         #     # if training bias, and more than one rule
@@ -440,6 +458,8 @@ def train(model_dir,
                     if rich_output:
                         display_rich_output(model, sess, step, log, model_dir)
 
+                    #print('##################### Validation step finished #####################')
+
                 # Training
                 rule_train_now = hp['rng'].choice(hp['rule_trains'],
                                                   p=hp['rule_probs'])
@@ -450,6 +470,8 @@ def train(model_dir,
                         batch_size=hp['batch_size_train'],
                         rule_strength=hp['rule_strength'],
                         no_rule=hp['no_rule'])
+                
+                #print('##################### Train input creation #####################')
                 
                 # if trainables == 'bias' and len(hp['rule_trains']) > 1:
                 #     # if training bias, and more than one rule
@@ -465,7 +487,12 @@ def train(model_dir,
                     
                 # Generating feed_dict.
                 feed_dict = tools.gen_feed_dict(model, trial, hp)
+
+                #print('##################### Feed Dictionary obtained #####################')
+
                 sess.run(model.train_step, feed_dict=feed_dict)
+
+                #print('##################### Training batch finished #####################')
 
                 step += 1
 

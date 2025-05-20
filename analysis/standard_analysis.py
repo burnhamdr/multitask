@@ -327,7 +327,7 @@ def activity_histogram(model_dir,
     ax.set_yticks([])
 
 
-def schematic_plot(model_dir, rule=None):
+def schematic_plot(model_dir, stim_index=0, rule=None):
     fontsize = 6
 
     rule = rule or 'dm1'
@@ -338,6 +338,7 @@ def schematic_plot(model_dir, rule=None):
     with tf.Session() as sess:
         model.restore()
         trial = generate_trials(rule, hp, mode='test')
+        print(trial.x.shape)
         feed_dict = tools.gen_feed_dict(model, trial, hp)
         x = trial.x
         h, y_hat = sess.run([model.h, model.y_hat], feed_dict=feed_dict)
@@ -369,14 +370,14 @@ def schematic_plot(model_dir, rule=None):
             plt.ylim([-0.1, 1.5])
             plt.title('Fixation input', fontsize=fontsize, y=0.9)
         elif i == 1:
-            plt.imshow(x[:, 0, 1:1+n_eachring].T, aspect='auto', cmap=cmap,
+            plt.imshow(x[:, stim_index, 1:1+n_eachring].T, aspect='auto', cmap=cmap,
                        vmin=0, vmax=1, interpolation='none',origin='lower')
             plt.yticks([0, (n_eachring-1)/2, n_eachring-1],
                        [r'0$\degree$', '', r'360$\degree$'],
                        rotation='vertical')
             plt.title('Stimulus mod 1', fontsize=fontsize, y=0.9)
         elif i == 2:
-            plt.imshow(x[:, 0, 1+n_eachring:1+2*n_eachring].T, aspect='auto',
+            plt.imshow(x[:, stim_index, 1+n_eachring:1+2*n_eachring].T, aspect='auto',
                        cmap=cmap, vmin=0, vmax=1,
                        interpolation='none', origin='lower')
             plt.yticks([0, (n_eachring-1)/2, n_eachring-1], ['', '', ''],
@@ -463,13 +464,13 @@ def schematic_plot(model_dir, rule=None):
         ax.yaxis.set_ticks_position('left')
 
         if i == 0:
-            plt.plot(y_hat[:,0,0],color='xkcd:blue')
+            plt.plot(y_hat[:,stim_index,0],color='xkcd:blue')
             plt.yticks([0.05,0.8],['',''],rotation='vertical')
             plt.ylim([-0.1,1.1])
             plt.title('Fixation output', fontsize=fontsize, y=0.9)
 
         elif i == 1:
-            plt.imshow(y_hat[:,0,1:].T, aspect='auto', cmap=cmap,
+            plt.imshow(y_hat[:,stim_index,1:].T, aspect='auto', cmap=cmap,
                        vmin=0, vmax=1, interpolation='none', origin='lower')
             plt.yticks([0, (n_eachring-1)/2, n_eachring-1],
                        [r'0$\degree$', '', r'360$\degree$'],

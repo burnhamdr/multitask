@@ -10,16 +10,17 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 from sklearn import metrics
 from sklearn.cluster import AgglomerativeClustering, KMeans
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 # Parameters
-all_tasks = ['odd', 'firsthalf', 'prime', 'notodd', 'notfirsthalf', 'notprime']
+all_tasks = ['odd', 'firsthalf', 'prime', 'notodd', 'notfirsthalf']
 batch_size = 64
 learning_rate = 0.01
 num_neurons_1 = 15000
 num_neurons_2 = 2500
 num_neurons_3 = 2500
-train_tasks = ['odd', 'firsthalf', 'prime', 'notodd', 'notfirsthalf', 'notprime']
-model_dir = './../../models/mlp_models/odd_firsthalf_prime_notodd_notfirsthalf_notprime_15000-2500-2500_01'
+train_tasks = ['odd', 'firsthalf', 'prime', 'notodd', 'notfirsthalf']
+model_dir='./../../models/mlp_models/bah_prova_auto'
 
 # Load data
 train_set, _ = datasets.mnist.load_data()
@@ -59,6 +60,15 @@ uniform_initializer = tf.keras.initializers.RandomUniform(minval=-1, maxval=1)
 normal_initializer = tf.keras.initializers.RandomNormal()
 
 model = models.Sequential([
+    layers.InputLayer(input_shape=(784+len(all_tasks),)),
+    layers.Dense(512, use_bias=True, trainable=True, activation='relu'),
+    layers.Dense(256, use_bias=True, trainable=True, activation='relu'),
+    layers.Dense(10, use_bias=True, trainable=True, activation='relu'),
+    layers.Dense(1, use_bias=True, trainable=True, activation='sigmoid')
+])
+
+"""
+model = models.Sequential([
     layers.InputLayer(input_shape=(784 + len(all_tasks),)),
     layers.Dense(num_neurons_1, use_bias=False, trainable=False, kernel_initializer=normal_initializer),
     BiasOnlyLayer(num_neurons_1, activation='relu'),
@@ -69,12 +79,15 @@ model = models.Sequential([
     layers.Dense(1, use_bias=False, trainable=False, kernel_initializer=normal_initializer),
     BiasOnlyLayer(1, activation='sigmoid')
 ])
+"""
 
 model.load_weights(os.path.join(model_dir, 'model_weights.h5'))
 
 model.compile(optimizer=tf.keras.optimizers.Adam(lr=learning_rate),
               loss='binary_crossentropy',
               metrics=['accuracy'])
+
+model.summary()
 
 # Task-specific activation extraction
 tv_matrix = []
@@ -84,7 +97,7 @@ for task in all_tasks:
     curr_val_imgs, curr_val_labels = preprocessing(imgs=val_imgs, labels=val_labels,
                                                     train_tasks=[task], all_tasks=all_tasks)
 
-    bias_only_layers = [layer for layer in model.layers if isinstance(layer, BiasOnlyLayer)]
+    bias_only_layers = [layer for layer in model.layers if isinstance(layer, layers.Dense)]
     bias_only_outputs = [layer.output for layer in bias_only_layers]
     activation_model = Model(inputs=model.input, outputs=bias_only_outputs)
     activations = activation_model.predict(curr_val_imgs, verbose=0)
@@ -145,6 +158,7 @@ plt.imshow(sorted_tv_matrix.T, cmap='hot', interpolation='none', aspect='auto', 
 cluster_boundaries = np.where(np.diff(np.sort(best_labels)) != 0)[0] + 1
 for boundary in cluster_boundaries:
     plt.axvline(x=boundary, color='white', linestyle='--', linewidth=1)
+    continue
 
 plt.xticks([])
 plt.yticks(ticks=range(len(all_tasks)), labels=all_tasks)

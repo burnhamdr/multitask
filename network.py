@@ -112,6 +112,7 @@ class LeakyRNNCell(RNNCell):
                  num_units,
                  n_input,
                  alpha,
+                 num_attractors=10,
                  sigma_rec=0,
                  activation='softplus',
                  w_rec_init='diag',
@@ -191,6 +192,15 @@ class LeakyRNNCell(RNNCell):
             elif self._w_rec_init == 'randgauss':
                 w_rec0 = (self._w_rec_start *
                         self.rng.randn(n_hidden, n_hidden)/np.sqrt(n_hidden))
+            elif self._w_rec_init == 'singlering':
+                w_rec0 = create_recurrent_weights_ring_attractor(n_hidden, 0.5, 1)
+            elif self._w_rec_init == 'lowranknoise':
+                print(num_attractors)
+                w_rec0 = init_bernoulli_lowrank_plus_noise(n_hidden, num_attractors, 0.5)
+            elif self._w_rec_init == 'newsinglering':
+                w_rec0 = new_create_recurrent_weights_ring_attractor(n_hidden, 2.1, 1.6, 2.)
+            elif self._w_rec_init == 'newdoublering':
+                w_rec0 = new_create_recurrent_weights_two_ring_attractor(n_hidden, 2.1, 1.6, 2.)
 
         matrix0 = np.concatenate((w_in0, w_rec0), axis=0)
 
@@ -206,6 +216,8 @@ class LeakyRNNCell(RNNCell):
             elif self._b_rec_init == 'uniform':
                 self._bias_initializer = init_ops.random_uniform_initializer(
                     minval=-0.1, maxval=0.1, dtype=tf.float32)
+            elif self._b_rec_init == 'randgauss':
+                self._bias_initializer = init_ops.random_normal_initializer(dtype=tf.float32)
 
     @property
     def state_size(self):
@@ -467,7 +479,8 @@ class Model(object):
                  model_dir,
                  hp=None,
                  sigma_rec=None,
-                 dt=None):
+                 dt=None,
+                 display_info=True):
         """
         Initializing the model with information from hp
 
@@ -490,11 +503,13 @@ class Model(object):
         self.rng = np.random.RandomState(hp['seed'])
 
         if sigma_rec is not None:
-            print('Overwrite sigma_rec with {:0.3f}'.format(sigma_rec))
+            if display_info:
+                print('Overwrite sigma_rec with {:0.3f}'.format(sigma_rec))
             hp['sigma_rec'] = sigma_rec
 
         if dt is not None:
-            print('Overwrite original dt with {:0.1f}'.format(dt))
+            if display_info:
+                print('Overwrite original dt with {:0.1f}'.format(dt))
             hp['dt'] = dt
 
         if 'alpha' not in hp:
@@ -590,9 +605,12 @@ class Model(object):
                 hp['w_out_init']='glorot_uniform'
             if 'b_out_init' not in hp:
                 hp['b_out_init']='zeros'
+            if 'num_attractors' not in hp:
+                hp['num_attractors']=10
 
             cell = LeakyRNNCell(n_rnn, n_in_rnn,
                                 hp['alpha'],
+                                hp['num_attractors'],
                                 sigma_rec=hp['sigma_rec'],
                                 activation=hp['activation'],
                                 w_rec_init=hp['w_rec_init'],
@@ -635,6 +653,8 @@ class Model(object):
             elif hp['b_out_init'] == 'uniform':
                 self._b_out_initializer = init_ops.random_uniform_initializer(
                     minval=-0.1, maxval=0.1, dtype=tf.float32)
+            elif hp['b_out_init'] == 'randgauss':
+                self._b_out_initializer = init_ops.random_normal_initializer(dtype=tf.float32)
 
         with tf.variable_scope("output"):
             # Using default initialization `glorot_uniform_initializer`
@@ -656,10 +676,20 @@ class Model(object):
                 initializer=self._b_out_initializer
             )
 
+        #self.h = tf.Print(self.h, [tf.shape(self.h)], message="Shape of h: ")
+
         h_shaped = tf.reshape(self.h, (-1, n_rnn))
         y_shaped = tf.reshape(self.y, (-1, n_output))
+
+        #h_shaped = tf.Print(h_shaped, [tf.shape(h_shaped)], message="Shape of h_shaped: ")
+        #y_shaped= tf.Print(y_shaped, [tf.shape(y_shaped)], message="Shape of y_shaped: ")
+        #w_out= tf.Print(w_out, [tf.shape(w_out)], message="Shape of w_out: ")
         # y_hat_ shape (n_time*n_batch, n_unit)
+
         y_hat_ = tf.matmul(h_shaped, w_out) + b_out
+
+        #y_hat_= tf.Print(y_hat_, [tf.shape(y_hat_)], message="Shape of y_hat_: ")
+
         if hp['loss_type'] == 'lsq':
             # Least-square loss
             y_hat = tf.sigmoid(y_hat_)
@@ -935,3 +965,141 @@ class Model(object):
                 v_val[units] = activations
 
                 sess.run(v.assign(v_val))
+
+def new_create_recurrent_weights_ring_attractor(N, g, rho, Si):
+
+    R = g * np.random.normal(0, np.sqrt(1./(N)), (N,N))
+
+    y1 = get_gaussian_vector( 0, 1, N) # Unit vectors required for the rank-two structure (see Methods)
+    y2 = get_gaussian_vector( 0, 1, N)
+
+    x1 = get_gaussian_vector( 0, 1, N)
+    x2 = get_gaussian_vector( 0, 1, N)
+    x3 = get_gaussian_vector( 0, 1, N)
+    x4 = get_gaussian_vector( 0, 1, N)
+
+    m1 = np.sqrt(Si**2 - rho**2)*x1 + rho*y1
+    m2 = np.sqrt(Si**2 - rho**2)*x2 + rho*y2
+    n1 = np.sqrt(Si**2 - rho**2)*x3 + rho*y1
+    n2 = np.sqrt(Si**2 - rho**2)*x4 + rho*y2
+
+    M = (np.outer( m1 , n1 ) + np.outer( m2 , n2 )) / N
+    J = M + R
+
+    return J
+
+def new_create_recurrent_weights_two_ring_attractor(N, g, rho, Si):
+
+    R = g * np.random.normal(0, np.sqrt(1./(N)), (N,N))
+
+    y1 = get_gaussian_vector( 0, 1, N) # Unit vectors required for the rank-two structure (see Methods)
+    y2 = get_gaussian_vector( 0, 1, N)
+
+    x1 = get_gaussian_vector( 0, 1, N)
+    x2 = get_gaussian_vector( 0, 1, N)
+    x3 = get_gaussian_vector( 0, 1, N)
+    x4 = get_gaussian_vector( 0, 1, N)
+
+    m1 = np.sqrt(Si**2 - rho**2)*x1 + rho*y1
+    m2 = np.sqrt(Si**2 - rho**2)*x2 + rho*y2
+    n1 = np.sqrt(Si**2 - rho**2)*x3 + rho*y1
+    n2 = np.sqrt(Si**2 - rho**2)*x4 + rho*y2
+
+    M1 = (np.outer( m1 , n1 ) + np.outer( m2 , n2 )) / N
+
+    y1 = get_gaussian_vector( 0, 1, N) # Unit vectors required for the rank-two structure (see Methods)
+    y2 = get_gaussian_vector( 0, 1, N)
+
+    x1 = get_gaussian_vector( 0, 1, N)
+    x2 = get_gaussian_vector( 0, 1, N)
+    x3 = get_gaussian_vector( 0, 1, N)
+    x4 = get_gaussian_vector( 0, 1, N)
+
+    m1 = np.sqrt(Si**2 - rho**2)*x1 + rho*y1
+    m2 = np.sqrt(Si**2 - rho**2)*x2 + rho*y2
+    n1 = np.sqrt(Si**2 - rho**2)*x3 + rho*y1
+    n2 = np.sqrt(Si**2 - rho**2)*x4 + rho*y2
+
+    M2 = (np.outer( m1 , n1 ) + np.outer( m2 , n2 )) / N
+
+    J = M1 + M2 + R
+
+    return J
+
+def create_recurrent_weights_ring_attractor(N, g, structure_strength):
+    """
+    Creates the recurrent weight matrix J for an RNN, designed to have a ring attractor,
+    following Mastrogiuseppe and Ostojic (2018).  This implementation
+    creates a rank-2 connectivity structure suitable for generating a ring attractor.
+
+    Args:
+        N (int): Number of neurons in the network.
+        g (float): Strength of the random component of the connectivity.
+        structure_strength (float): Strength of the low-rank structure.
+            Corresponds to m^T n / N in the paper.  This should be the
+            SAME for both sets of m and n vectors.
+
+    Returns:
+        numpy.ndarray: The recurrent weight matrix J (N x N).
+    """
+
+    # 1. Define the left and right connectivity vectors, m1, n1, m2, and n2.
+    #    These vectors determine the low-rank structure in the connectivity.
+    #    For a ring attractor, the overlap between m1 and n1 should be the
+    #    same as the overlap between m2 and n2.
+    m1 = np.zeros(N)
+    n1 = np.zeros(N)
+    m2 = np.zeros(N)
+    n2 = np.zeros(N)
+
+    # Create oscillatory patterns, similar to the previous implementation,
+    # but now we have two sets of m and n.
+    for i in range(N):
+        m1[i] = np.cos(2 * np.pi * i / N)
+        n1[i] = np.sin(2 * np.pi * i / N)
+        m2[i] = np.cos(2 * np.pi * i / N + np.pi / 4)  # Shifted phase for m2
+        n2[i] = np.sin(2 * np.pi * i / N + np.pi / 4)  # Shifted phase for n2
+
+    # 2. Calculate the overlaps (m^T n / N) - Enforce equal overlaps.
+    overlap1 = np.dot(m1, n1) / N
+    overlap2 = np.dot(m2, n2) / N
+
+    # Use the provided structure_strength, or calculate it from the overlaps.
+    if structure_strength is None:
+      structure_strength = overlap1 # or overlap2, they should be equal
+
+    # 3. Create the low-rank component, P.  Now it's a rank-2 structure.
+    P = (structure_strength / N) * (np.outer(m1, n1) + np.outer(m2, n2))
+
+    # 4. Create the random component, gx.
+    x = np.random.randn(N, N) * (g / np.sqrt(N))
+
+    # 5. Combine the low-rank and random components.
+    J = g * x + P
+
+    return J
+
+def init_bernoulli_lowrank_plus_noise(N, p=10, g=0.5):
+    # Generate p Bernoulli patterns (0 or 1)
+    Z = np.random.binomial(1, 0.5, size=(N, p))
+
+    # Low-rank part: outer product sum
+    W_lowrank = (Z @ Z.T) / N
+
+    # Full-rank random noise matrix J
+    J = np.random.normal(0, g**2 / N, size=(N, N))
+
+    # Combine
+    W = W_lowrank + J
+
+    # Set autapses
+    np.fill_diagonal(W, 1.0)
+
+    return W
+
+def get_gaussian_vector(mean, std, N):
+
+	if std>0:
+		return np.random.normal (mean, std, N )
+	else:
+		return mean*np.ones(N)

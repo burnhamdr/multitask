@@ -244,7 +244,8 @@ def random(config, mode=None, **kwargs):
     '''
     dt = config['dt']
     tdim = int(10000/dt)
-    batch_size = kwargs['batch_size']
+    batch_size = 100
+    #batch_size = kwargs['batch_size']
 
     trial = Trial(config, tdim, batch_size)
     trial.add_x_noise()
@@ -663,6 +664,7 @@ def fdgo_(config, mode, anti_response, **kwargs):
     rng = config['rng']
     if mode == 'random': # Randomly generate parameters
         batch_size = kwargs['batch_size']
+        #print(batch_size)
         # each batch consists of sequences of equal length
         # A list of locations of fixation points and fixation off time
 
@@ -682,7 +684,10 @@ def fdgo_(config, mode, anti_response, **kwargs):
 
         stim_ons   = int(500/dt)
         fix_offs   = int(1500/dt)
+        print(ind_stim_loc)
+        print(n_stim_loc)
         stim_locs  = 2*np.pi*ind_stim_loc/n_stim_loc
+        print(stim_locs)
         stim_mod   = ind_stim_mod + 1
 
     elif mode == 'psychometric':
@@ -1653,6 +1658,7 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
     Return:
         trial: Trial class instance, containing input and target output
     """
+
     config = hp
     trial = rule_mapping[rule](config, mode, **kwargs)
 

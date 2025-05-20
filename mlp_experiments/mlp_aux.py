@@ -23,7 +23,29 @@ def get_real_label(original_label,task):
 
     return new_label
 
-def preprocessing(imgs,labels,train_tasks,all_tasks,prob_tasks=None):
+def preprocessing(imgs,labels,train_tasks,all_tasks,prob_tasks=None, class_training=False):
+
+    if class_training:
+
+        formatted_imgs=[]
+        formatted_labels=[]
+
+        for img,label in zip(imgs,labels):
+            
+            flattened_img=img.reshape(784)/255.
+            rule_input=np.zeros(len(all_tasks))
+            final_input=np.concatenate([flattened_img, rule_input])
+            formatted_imgs.append(final_input)
+
+            # Redefine the corresponding label based on which task we have extracted
+            
+            formatted_labels.append(label)
+
+
+        formatted_imgs=np.array(formatted_imgs)
+        formatted_labels=np.array(formatted_labels)
+
+        return formatted_imgs,formatted_labels
 
     if prob_tasks==None or len(prob_tasks)!=len(train_tasks):
         prob_tasks=[1./len(train_tasks)]*len(train_tasks)

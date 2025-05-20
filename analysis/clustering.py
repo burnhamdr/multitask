@@ -218,7 +218,7 @@ save = True
 
 
 class Analysis(object):
-    def __init__(self, model_dir, data_type, normalization_method='max'):
+    def __init__(self, model_dir, data_type, normalization_method='max',predef_num_clusters=None):
         #check if model_dir is a list of directories
         if isinstance(model_dir, list):
             h_var_all_ = []
@@ -297,11 +297,15 @@ class Analysis(object):
         # Choose the number of cluster when Silhouette score is maximum
         if data_type == 'rule':
             #i = np.where((scores[1:]-scores[:-1])<0)[0][0]
-            i = np.argmax(scores)
+            if not predef_num_clusters:
+                i = np.argmax(scores)
+            else:
+                i = predef_num_clusters-2
             #i = np.argmax(pen_scores)
         else:
             # The more rigorous method doesn't work well in this case
-            i = n_clusters.index(10)
+            i=np.argmax(scores)
+            #i = n_clusters.index(10)
 
         labels = labels_list[i]
         n_cluster = n_clusters[i]
@@ -311,8 +315,7 @@ class Analysis(object):
         if data_type == 'rule':
             label_prefs = [np.argmax(h_normvar_all[labels==l].sum(axis=0)) for l in set(labels)]
         elif data_type == 'epoch':
-            ## TODO: this may no longer work!
-            label_prefs = [self.keys[np.argmax(h_normvar_all[labels==l].sum(axis=0))][0] for l in set(labels)]
+            label_prefs = [self.keys[0][np.argmax(h_normvar_all[labels==l].sum(axis=0))][0] for l in set(labels)]
 
         ind_label_sort = np.argsort(label_prefs)
         label_prefs = np.array(label_prefs)[ind_label_sort]
@@ -373,13 +376,14 @@ class Analysis(object):
         ax = fig.add_axes([0.3, 0.3, 0.55, 0.55])
         ax.plot(self.n_clusters, self.scores, 'o-', ms=3, color='tab:blue')
         ax.tick_params(axis='y', labelcolor='tab:blue')
+        """
         #create twin axis
         ax2 = ax.twinx()
         ax2.plot(self.n_clusters, self.pen_scores, 'o-', ms=3, color='tab:red')
         ax2.set_ylabel('Penalized score', fontsize=7)
         #color the twin axis labels and ticks and axis
         ax2.tick_params(axis='y', labelcolor='tab:red')
-
+        """
         ax.set_xlabel('Number of clusters', fontsize=7)
         ax.set_ylabel('Silhouette score', fontsize=7)
         ax.set_title('Chosen number of clusters: {:d}'.format(self.n_cluster),
@@ -389,9 +393,9 @@ class Analysis(object):
         ax.xaxis.set_ticks_position('bottom')
         ax.yaxis.set_ticks_position('left')
         #manually construct the legend
-        handles = [Line2D([0], [0], color='tab:blue', lw=1, label='Silhouette score'),
-                     Line2D([0], [0], color='tab:red', lw=1, label='Penalized score')]
-        ax.legend(handles=handles, loc='lower right', fontsize=7)
+        handles = [Line2D([0], [0], color='tab:blue', lw=1, label='Silhouette score')]#,
+                    #Line2D([0], [0], color='tab:red', lw=1, label='Penalized score')]
+        ax.legend(handles=handles, loc='upper right', fontsize=7)
         # ax.set_ylim([0, 0.32])
         if save:
             fig_name = 'cluster_score'
@@ -406,8 +410,9 @@ class Analysis(object):
         ######################### Plotting Variance ###################################
         # Plot Normalized Variance
         if self.data_type == 'rule':
-            # figsize = (4.5,5.5)
-            figsize = (3.5,2.5)
+            figsize = (7.5,4.)
+            #figsize = (4.5,5.5)
+            #figsize = (3.5,2.5)
             rect = [0.25, 0.2, 0.6, 0.7]
             rect_color = [0.25, 0.15, 0.6, 0.05]
             rect_cb = [0.87, 0.2, 0.03, 0.7]
@@ -415,11 +420,11 @@ class Analysis(object):
             fs = 6
             labelpad = 22
         elif self.data_type == 'epoch':
-            figsize = (3.5,4.5)
+            figsize = (4.,5.5)
             rect = [0.25, 0.1, 0.6, 0.85]
             rect_color = [0.25, 0.05, 0.6, 0.05]
             rect_cb = [0.87, 0.1, 0.03, 0.85]
-            tick_names = [rule_name[key[0]]+' '+key[1] for key in self.keys]
+            tick_names = [rule_name[key[0]]+' '+key[1] for key in self.keys[0]]
             fs = 5
             labelpad = 20
         else:
@@ -492,8 +497,9 @@ class Analysis(object):
         ######################### Plotting Variance ###################################
         # Plot Normalized Variance
         if self.data_type == 'rule':
-            # figsize = (4.5,5.5)
-            figsize = (3.5,2.5)
+            figsize = (7.5,3.5) # (width,heigth)
+            #figsize = (4.5,5.5)
+            #figsize = (3.5,2.5)
             rect = [0.25, 0.2, 0.6, 0.7]
             rect_color = [0.25, 0.15, 0.6, 0.05]
             rect_cb = [0.87, 0.2, 0.03, 0.7]
@@ -513,6 +519,7 @@ class Analysis(object):
             raise ValueError
 
         h_plot  = self.h_normvar_all.T
+    
         vmin, vmax = 0, 1
         fig = plt.figure(figsize=figsize)
         ax = fig.add_axes(rect)
@@ -860,7 +867,7 @@ class Analysis(object):
         changes_plot = [perfs_changes, cost_changes]
 
         fs = 6
-        figsize = (2.5,2.5)
+        figsize = (3,4)#(2.5,2.5)
         rect = [0.3, 0.2, 0.5, 0.7]
         rect_cb = [0.82, 0.2, 0.03, 0.7]
         rect_color = [0.3, 0.15, 0.5, 0.05]
