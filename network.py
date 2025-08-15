@@ -201,6 +201,8 @@ class LeakyRNNCell(RNNCell):
                 w_rec0 = new_create_recurrent_weights_ring_attractor(n_hidden, 2.1, 1.6, 2.)
             elif self._w_rec_init == 'newdoublering':
                 w_rec0 = new_create_recurrent_weights_two_ring_attractor(n_hidden, 2.1, 1.6, 2.)
+            elif self._w_rec_init == 'plane':
+                w_rec0 = new_create_recurrent_weights_plane_attractor(n_hidden,2.1,1.6,2.0)
 
         matrix0 = np.concatenate((w_in0, w_rec0), axis=0)
 
@@ -987,6 +989,37 @@ def new_create_recurrent_weights_ring_attractor(N, g, rho, Si):
     J = M + R
 
     return J
+
+def new_create_recurrent_weights_plane_attractor(N, g, rho, Si):
+    R = g * np.random.normal(0, np.sqrt(1./N), (N, N))
+
+    # Gaussian basis vectors
+    y1, y2 = get_gaussian_vector(0, 1, N), get_gaussian_vector(0, 1, N)
+    y3, y4 = get_gaussian_vector(0, 1, N), get_gaussian_vector(0, 1, N)
+
+    x1, x2 = get_gaussian_vector(0, 1, N), get_gaussian_vector(0, 1, N)
+    x3, x4 = get_gaussian_vector(0, 1, N), get_gaussian_vector(0, 1, N)
+    x5, x6 = get_gaussian_vector(0, 1, N), get_gaussian_vector(0, 1, N)
+    x7, x8 = get_gaussian_vector(0, 1, N), get_gaussian_vector(0, 1, N)
+
+    # Structured vectors with shared correlations
+    m1 = np.sqrt(Si**2 - rho**2) * x1 + rho * y1
+    m2 = np.sqrt(Si**2 - rho**2) * x2 + rho * y2
+    n1 = np.sqrt(Si**2 - rho**2) * x3 + rho * y1
+    n2 = np.sqrt(Si**2 - rho**2) * x4 + rho * y2
+
+    m3 = np.sqrt(Si**2 - rho**2) * x5 + rho * y3
+    m4 = np.sqrt(Si**2 - rho**2) * x6 + rho * y4
+    n3 = np.sqrt(Si**2 - rho**2) * x7 + rho * y3
+    n4 = np.sqrt(Si**2 - rho**2) * x8 + rho * y4
+
+    # Rank-4 structured component (to allow a more flexible 2D attractor)
+    M = (np.outer(m1, n1) + np.outer(m2, n2) + np.outer(m3, n3) + np.outer(m4, n4)) / N
+
+    # Final recurrent matrix
+    J = M + R
+    return J
+
 
 def new_create_recurrent_weights_two_ring_attractor(N, g, rho, Si):
 

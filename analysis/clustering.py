@@ -315,6 +315,8 @@ class Analysis(object):
         if data_type == 'rule':
             label_prefs = [np.argmax(h_normvar_all[labels==l].sum(axis=0)) for l in set(labels)]
         elif data_type == 'epoch':
+            print(self.keys)
+            print(self.keys.shape)
             label_prefs = [self.keys[0][np.argmax(h_normvar_all[labels==l].sum(axis=0))][0] for l in set(labels)]
 
         ind_label_sort = np.argsort(label_prefs)

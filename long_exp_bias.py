@@ -24,10 +24,10 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 #with sess.as_default():
 if True:
 
-    train.train(model_dir='./../models/bias_delayanti_2048_005', 
-                hp={"n_rnn": 2048,
+    train.train(model_dir='./../models/bias_dmsgo_1024_01', 
+                hp={"n_rnn": 1024,
                     "target_perf": 0.97,
-                    "learning_rate": 0.005,
+                    "learning_rate": 0.01,
                     "batch_size_train": 64,
                     "batch_size_test": 512,
                     "in_type": "normal",
@@ -44,5 +44,5 @@ if True:
                     "rule_strength": 1.0,
                     "tau": 100, "dt": 20, "alpha": 0.2, "sigma_rec": 0.05, "sigma_x": 0.01, "l1_h": 0, "l2_h": 0, "l1_weight": 0, "l2_weight": 0, "l2_weight_init": 0, "p_weight_train": None, "n_eachring": 32, "num_ring": 2, "n_rule": 22, "rule_start": 65, "n_input": 87, "n_output": 33, "ruleset": "all", "save_name": "test", "c_intsyn": 0, "ksi_intsyn": 0, "no_rule": False, "seed": 0, "rule_trains": ["fdgo", "fdanti", "delaygo"], "rules": ["fdgo", "fdanti", "delaygo"], "rule_probs": [0.3333333333333333, 0.3333333333333333, 0.3333333333333333]},
                 ruleset='all',
-                rule_trains = ['delayanti'],#'fdgo',contextdm1,dm1,dmsgo
+                rule_trains = ['dmsgo'],#'fdgo',contextdm1,dm1,dmsgo
                 trainables='all_bias')

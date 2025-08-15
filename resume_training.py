@@ -15,10 +15,10 @@ import numpy as np
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-train.train(model_dir='./../models/newsinglering_bias_fdgo_fdanti_delaygo_256_01/new01', 
+train.train(model_dir='./../models/newsinglering_bias_fdgo_fdanti_delaygo_256_01/new02', 
                 hp={"n_rnn": 1024,
                     "target_perf": 0.85,
-                    "learning_rate": 0.01,
+                    "learning_rate": 0.02,
                     "batch_size_train": 64,
                     "batch_size_test": 512,
                     "in_type": "normal",

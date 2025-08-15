@@ -12,3 +12,5 @@ sbatch/*
 *.ckpt.data-00000-of-00001
 *.ckpt.meta
 *checkpoint
+*.png
+*.gz
