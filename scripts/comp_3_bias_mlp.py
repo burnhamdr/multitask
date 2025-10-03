@@ -106,7 +106,7 @@ def get_data(dataset):
         dataset = load_dataset("tanganke/kmnist")
         train_set = (np.array([np.array(img) for img in dataset['train']['image']]), np.array(dataset['train']['label']))
     elif dataset in ['Ethiopic', 'NKo', 'Osmanya', 'Vai']:
-        dataset_dir=f'../datasets/{dataset}'
+        dataset_dir=f'../../datasets/{dataset}'
         train_imgs=np.load(os.path.join(dataset_dir,f'{dataset}_MNIST_X_train.npy'),allow_pickle=True)
         train_labels=np.load(os.path.join(dataset_dir,f'{dataset}_MNIST_y_train.npy'),allow_pickle=True)
         train_set=train_imgs,train_labels
@@ -126,7 +126,7 @@ def get_data(dataset):
                                         train_tasks=[],all_tasks=[],class_training=True, no_rule=True)
 
     return train_imgs,train_labels, val_imgs,val_labels
-model_dir='./../models/mlp_models/paper_unif'
+model_dir='./../../models/mlp_models/paper_unif'
 
 weights=np.load(os.path.join(model_dir,'weights.npy'),allow_pickle=True)
 in_weights=weights[0]

@@ -61,7 +61,7 @@ from multiprocessing.pool import ThreadPool
 
 def run_train_parallel(b_init,name,seed):
 
-    train.train(model_dir=f'./../models/newsingle_bias_fdgo_fdanti_delaygo_{n_hidden}_01/{name}', 
+    train.train(model_dir=f'./../../models/newsingle_bias_fdgo_fdanti_delaygo_{n_hidden}_01/{name}', 
                 hp={"n_rnn": n_hidden,
                     "target_perf": 0.85,
                     "learning_rate": 0.01,

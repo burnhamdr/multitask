@@ -348,7 +348,7 @@ def schematic_plot(model_dir, stim_index=0, rule=None):
     n_hidden = hp['n_rnn']
 
     # Plot Stimulus
-    fig = plt.figure(figsize=(1.0,1.2))
+    fig = plt.figure(figsize=(2.0,2.4))
     heights = np.array([0.06,0.25,0.25])
     for i in range(3):
         ax = fig.add_axes([0.2,sum(heights[i+1:]+0.1)+0.05,0.7,heights[i]])
@@ -390,7 +390,7 @@ def schematic_plot(model_dir, stim_index=0, rule=None):
     plt.show()
 
     # Plot Rule Inputs
-    fig = plt.figure(figsize=(1.0, 0.5))
+    fig = plt.figure(figsize=(2.0, 1.0))
     ax = fig.add_axes([0.2,0.3,0.7,0.45])
     cmap = 'Purples'
     X = x[:, 0, 1+2*n_eachring:]
@@ -421,7 +421,7 @@ def schematic_plot(model_dir, stim_index=0, rule=None):
 
 
     # Plot Units
-    fig = plt.figure(figsize=(1.0, 0.8))
+    fig = plt.figure(figsize=(2.0, 1.6))
     ax = fig.add_axes([0.2,0.1,0.7,0.75])
     cmap = 'Purples'
     plt.xticks([])
@@ -446,7 +446,7 @@ def schematic_plot(model_dir, stim_index=0, rule=None):
 
 
     # Plot Outputs
-    fig = plt.figure(figsize=(1.0,0.8))
+    fig = plt.figure(figsize=(2.0,1.6))
     heights = np.array([0.1,0.45])+0.01
     for i in range(2):
         ax = fig.add_axes([0.2, sum(heights[i+1:]+0.15)+0.1, 0.7, heights[i]])

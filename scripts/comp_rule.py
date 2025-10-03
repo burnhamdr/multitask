@@ -1,9 +1,9 @@
 import numpy as np
-from analysis import taskset
+from multitask.analysis import taskset
 import os
 
 
-model_dir='./../models/fdanti_delaygo_fdgo_delaydm1_dm1_delaydm2_dm2_contextdelaydm1_contextdm1_contextdelaydm2_dm2_multidelaydm_multidm_1024'
+model_dir='./../../models/fdanti_delaygo_fdgo_delaydm1_dm1_delaydm2_dm2_contextdelaydm1_contextdm1_contextdelaydm2_dm2_multidelaydm_multidm_1024'
 replace_rule= ['fdgo', 'reactgo', 'delaygo', 'fdanti', 'reactanti', 'delayanti',
               'dm1', 'dm2', 'contextdm1', 'contextdm2', 'multidm',
               'delaydm1', 'delaydm2', 'contextdelaydm1', 'contextdelaydm2', 'multidelaydm',
